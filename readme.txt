@@ -23,7 +23,7 @@ Powerful shipping plugin for woocommerce
 * و ...
 
 = سازگاری =
-* Woocommece 2.6.x
+* Woocommece 3.0.x
 * Wordpress 4.x
 
 == Installation ==
@@ -51,6 +51,9 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 0.8.8 =
+* Tweak: Compatibility with woocommerce 3.0.7
+* Tweak: Add filter for rates
 = 0.8.6 =
 * Fix: Disable method
 * Tweak: Postal rates updated

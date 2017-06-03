@@ -3,25 +3,26 @@
 Plugin Name: Persian Woocommerce Shipping
 Plugin URI: http://MahdiY.ir
 Description: Powerful shipping plugin for woocommerce
-Version: 0.8.6
+Version: 0.8.8
 Author: MahdiY
 Author URI: http://MahdiY.ir
 */
 
-	if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+if( !defined( 'ABSPATH' ) )
+    exit; // Exit if accessed directly
 
-	include("inc/state_city.php");
-	include("inc/taxonomy-shipping.php");
-	include("inc/woocommerce-shipping.php");
+include( "inc/state_city.php" );
+include( "inc/taxonomy-shipping.php" );
+include( "inc/woocommerce-shipping.php" );
 
-	define('PWS_VERSION', '0.8.6');
-	
-	function PWS() {
-		return Persian_Woocommerce_Shipping::instance();
-	}
+define( 'PWS_VERSION', '0.8.8' );
 
-	$GLOBALS['PWS'] = PWS();
+function PWS() {
+    return Persian_Woocommerce_Shipping::instance();
+}
 
-	register_activation_hook( __FILE__, array('Persian_Woocommerce_Shipping', 'install') );
+$GLOBALS['PWS'] = PWS();
+
+register_activation_hook( __FILE__, [ 'Persian_Woocommerce_Shipping', 'install' ] );
 
 ?>
