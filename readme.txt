@@ -3,7 +3,7 @@ Contributors: mahdiy
 Tags: woocommerce,shipping,persian woocommerce,persian
 Donate link: http://sabira.ir/donate?rel=persian-woocommerce-shipping
 Requires at least: 4.6
-Tested up to: 4.8.3
+Tested up to: 4.9.8
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -23,8 +23,9 @@ Powerful shipping plugin for woocommerce
 * و ...
 
 = سازگاری =
-* Woocommece 3.2.x
+* Woocommece 3.4.x
 * Wordpress 4.x
+* PHP 5.6.* & 7.*
 
 == Installation ==
 = نصب =

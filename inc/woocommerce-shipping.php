@@ -156,26 +156,34 @@ class Persian_Woocommerce_Shipping {
 
     public function load_child_term() {
 
-        extract( $this->selected_city );
-        $types = array( 'billing', 'shipping' );
+        $types = array( 'billing' );
 
-        foreach( $types as $type ) { ?>
-            <script type="text/javascript">
+		if( get_option('woocommerce_ship_to_destination') != 'billing_only' ) {
+			$types[] = 'shipping';
+		}
+		
+		?>
+		<script type="text/javascript">
                 var sabira_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-                jQuery(document).ready(function ($) {
 
+                jQuery(document).ready(function ($) {
+					
+		<?php foreach( $types as $type ) { ?>
+            
                     function <?php echo $type; ?>_sabira_state_changed() {
                         var data = {
                             'action': 'sabira_load_cities',
-                            'state_id': $('#<?php echo $type; ?>_state').val()
-                            // 'name' : '<?php echo $type; ?>'
+                            'state_id': $('#<?php echo $type; ?>_state').val(),
+                            'name' : '<?php echo $type; ?>'
                         };
+						
                         $.post(sabira_ajax_url, data, function (response) {
                             if (response == "")
                                 response = "<option value='0'><?php _e( 'لطفا استان خود را انتخاب کنید' ); ?><option>";
                             $('select#<?php echo $type; ?>_sabira_cities').html(response);
-                            $('body').trigger('update_checkout');
+							$('body').trigger('pws_city_loaded');
                         });
+						
                         $('select#<?php echo $type; ?>_sabira_cities').select2();
                         $('p#<?php echo $type; ?>_sabira_district_field').slideUp();
                         $('select#<?php echo $type; ?>_sabira_district').html("");
@@ -191,6 +199,7 @@ class Persian_Woocommerce_Shipping {
                             'city_id': $('#<?php echo $type; ?>_sabira_cities').val(),
                             'name': '<?php echo $type; ?>'
                         };
+						
                         $.post(sabira_ajax_url, data, function (response) {
                             if (response == "")
                                 $('p#<?php echo $type; ?>_sabira_district_field').slideUp();
@@ -199,6 +208,7 @@ class Persian_Woocommerce_Shipping {
 
                             $('select#<?php echo $type; ?>_sabira_district').html(response);
                             $('body').trigger('update_checkout');
+                            $('body').trigger('pws_city_loaded');
                         });
 
                         $('select#<?php echo $type; ?>_sabira_district').select2();
@@ -210,6 +220,9 @@ class Persian_Woocommerce_Shipping {
 
                     <?php echo $type; ?>_sabira_state_changed();
                     <?php echo $type; ?>_sabira_city_changed();
+					
+		<?php } ?>			
+					
                 });
             </script>
             <style>
@@ -217,8 +230,7 @@ class Persian_Woocommerce_Shipping {
                     width: 100% !important;
                 }
             </style>
-            <?php
-        }
+		<?php
     }
 
     public function sabira_load_cities_callback() {
@@ -245,6 +257,9 @@ class Persian_Woocommerce_Shipping {
             $name = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'billing' : 'shipping';
             $term_id = get_user_meta( get_current_user_id(), $name . '_city', true );
         }
+
+		$method = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'set_billing_state' : 'set_shipping_state';
+		WC()->customer->$method($state_id);
 
         foreach( $states as $state ) {
             printf( "<option value='%d' %s>%s</option>", $state->term_id, selected( $term_id, $state->term_id, false ), $state->name );
@@ -278,6 +293,9 @@ class Persian_Woocommerce_Shipping {
             $term_id = get_user_meta( get_current_user_id(), $name . '_district', true );
         }
 
+		$method = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'set_billing_city' : 'set_shipping_city';
+		WC()->customer->$method($city_id);
+		
         if( count( $cities ) ) {
             $city = get_term( $city_id, 'state_city' );
             printf( "<option value='%d' %s>%s</option>", $city->term_id, selected( $term_id, $city->term_id, false ), $city->name );
@@ -312,7 +330,6 @@ class Persian_Woocommerce_Shipping {
         <tr valign="top">
         <th scope="row" class="titledesc">
             <label for="<?php echo esc_attr( $value['id'] ); ?>"><?php echo esc_html( $value['title'] ); ?></label>
-            <?php echo $tooltip_html; ?>
         </th>
         <td class="forminp"><select name="<?php echo esc_attr( $value['id'] ); ?>"
                                     style="<?php echo esc_attr( $value['css'] ); ?>"
@@ -320,7 +337,7 @@ class Persian_Woocommerce_Shipping {
                                     aria-label="<?php esc_attr_e( 'Country', 'woocommerce' ) ?>"
                                     class="wc-enhanced-select">
                 <?php WC()->countries->country_dropdown_options( $country, $state ); ?>
-            </select> <?php echo $description; ?>
+            </select>
         </td>
         </tr><?php
     }
@@ -516,17 +533,19 @@ class Persian_Woocommerce_Shipping {
     public function add_district_cart_shipping_packages( $packages ) {
 
         if( isset( $_POST['post_data'] ) ) {
-            parse_str( $_POST['post_data'] );
+            parse_str( $_POST['post_data'], $data );
         }
 
-        if( isset( $billing_city ) ) {
-            $packages[0]['destination']['city'] = $billing_city;
+        if( isset( $data['billing_city'] ) ) {
+            $packages[0]['destination']['city'] = $data['billing_city'];
         }
-        $packages[0]['destination']['district'] = isset( $billing_district ) ? $billing_district : 0;
+		
+        $packages[0]['destination']['district'] = isset( $data['billing_district'] ) ? $data['billing_district'] : 0;
 
         if( isset( $_POST['billing_city'] ) ) {
             $packages[0]['destination']['city'] = $_POST['billing_city'];
         }
+		
         if( isset( $_POST['billing_district'] ) ) {
             $packages[0]['destination']['district'] = $_POST['billing_district'];
         }

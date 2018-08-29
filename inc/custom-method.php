@@ -134,7 +134,7 @@ class WC_Custom_Method extends WC_Shipping_Method {
 
         $shipping_total = 0;
 
-        $weight = $this->cart_weight * ( $this->current_weight_unit == 'kg' ? 1000 : 1 );
+        $weight = wc_get_weight( $this->cart_weight, 'g' );
 
         $rate_price['500']['in'] = 32000;
         $rate_price['500']['out'] = 38000;
