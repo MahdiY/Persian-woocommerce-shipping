@@ -5,11 +5,13 @@
  * E-Mail    : M@hdiY.IR
  */
 
-if( !defined( 'ABSPATH' ) )
-    exit; // Exit if accessed directly
+if( ! defined( 'ABSPATH' ) ) {
+    exit;
+} // Exit if accessed directly
 
-if( class_exists( 'WC_Custom_Method' ) )
-    return; // Stop if the class already exists
+if( class_exists( 'WC_Custom_Method' ) ) {
+    return;
+} // Stop if the class already exists
 
 class WC_Custom_Method extends WC_Shipping_Method {
 
@@ -19,8 +21,10 @@ class WC_Custom_Method extends WC_Shipping_Method {
         $this->instance_id = absint( $instance_id );
         $this->method_title = __( 'پست سفارشی' );
         $this->method_description = __( 'ارسال کالا با استفاده از پست سفارشی' ) . PWS()->donate();
-        $this->supports = [ 'shipping-zones',
-                            'instance-settings', ];
+        $this->supports = array(
+            'shipping-zones',
+            'instance-settings',
+        );
 
         $this->init();
     }
@@ -39,70 +43,91 @@ class WC_Custom_Method extends WC_Shipping_Method {
         $this->current_weight_unit = get_option( 'woocommerce_weight_unit' );
         $this->cart_weight = isset( WC()->cart ) ? WC()->cart->get_cart_contents_weight() : 0;
 
-        add_action( 'woocommerce_update_options_shipping_' . $this->id, [ $this, 'process_admin_options' ] );
+        add_action( 'woocommerce_update_options_shipping_' . $this->id, array( $this, 'process_admin_options' ) );
     }
 
     public function init_form_fields() {
 
-        $states = get_terms( [ 'taxonomy' => 'state_city', 'hide_empty' => false, 'parent' => 0 ] );
+        $states = get_terms( array( 'taxonomy' => 'state_city', 'hide_empty' => false, 'parent' => 0 ) );
 
-        $this->instance_form_fields = [ 'enabled'            => [ 'title'   => 'فعال/غیرفعال',
-                                                                  'type'    => 'checkbox',
-                                                                  'label'   => 'فعال کردن این روش ارسال',
-                                                                  'default' => 'yes' ],
-                                        'title'              => [ 'title'   => 'عنوان روش',
-                                                                  'type'    => 'text',
-                                                                  'default' => $this->method_title ],
-                                        'extra_cost'         => [ 'title'       => 'هزینه های اضافی',
-                                                                  'type'        => 'text',
-                                                                  'description' => 'هزینه های اضافی علاوه بر نرخ پستی را می توانید وارد نمائید، (مثل: هزینه های بسته بندی و ... ) مبلغ ثابت را به ریال وارد نمائید',
-                                                                  'default'     => 0 ],
-                                        'extra_cost_percent' => [ 'title'       => 'هزینه های اضافی به درصد',
-                                                                  'type'        => 'text',
-                                                                  'description' => 'هزینه های اضافی علاوه بر نرخ پستی را می توانید به درصد وارد نمائید (مثال: برای 2%، عدد 2 را وارد نمائید)',
-                                                                  'default'     => 0 ],
-                                        'insurance_cost'     => [ 'title'       => 'هزینه بیمه',
-                                                                  'type'        => 'text',
-                                                                  'description' => 'هزینه بیمه را بصورت ثابت وارد کنید، پیشفرض : 6500 ریال',
-                                                                  'default'     => 6500 ],
-                                        'post_tax_percent'   => [ 'title'       => 'مالیات پست',
-                                                                  'type'        => 'text',
-                                                                  'description' => 'درصد مالیات اداره پست، پیشفرض : 9 درصد',
-                                                                  'default'     => 9 ],
-                                        'source_state'       => [ 'title'       => 'استان مبدا (فروشنده)',
-                                                                  'type'        => 'select',
-                                                                  'description' => 'لطفا در این قسمت استانی که محصولات از آنجا ارسال می شوند را انتخاب نمائید',
-                                                                  'options'     => wp_list_pluck( $states, 'name', 'term_id' ) ],
-                                        'img_url'            => [ 'title'       => 'تصویر روش حمل و نقل',
-                                                                  'type'        => 'text',
-                                                                  'description' => 'آدرس تصویر مورد نظر برای این روش حمل و نقل را وارد کنید',
-                                                                  'default'     => '',
-                                                                  'css'         => 'direction: ltr;' ] ];
+        $this->instance_form_fields = array(
+            'enabled'            => array(
+                'title'   => 'فعال/غیرفعال',
+                'type'    => 'checkbox',
+                'label'   => 'فعال کردن این روش ارسال',
+                'default' => 'yes'
+            ),
+            'title'              => array(
+                'title'   => 'عنوان روش',
+                'type'    => 'text',
+                'default' => $this->method_title
+            ),
+            'extra_cost'         => array(
+                'title'       => 'هزینه های اضافی',
+                'type'        => 'text',
+                'description' => 'هزینه های اضافی علاوه بر نرخ پستی را می توانید وارد نمائید، (مثل: هزینه های بسته بندی و ... ) مبلغ ثابت را به ریال وارد نمائید',
+                'default'     => 0
+            ),
+            'extra_cost_percent' => array(
+                'title'       => 'هزینه های اضافی به درصد',
+                'type'        => 'text',
+                'description' => 'هزینه های اضافی علاوه بر نرخ پستی را می توانید به درصد وارد نمائید (مثال: برای 2%، عدد 2 را وارد نمائید)',
+                'default'     => 0
+            ),
+            'insurance_cost'     => array(
+                'title'       => 'هزینه بیمه',
+                'type'        => 'text',
+                'description' => 'هزینه بیمه را بصورت ثابت وارد کنید، پیشفرض : 6500 ریال',
+                'default'     => 6500
+            ),
+            'post_tax_percent'   => array(
+                'title'       => 'مالیات پست',
+                'type'        => 'text',
+                'description' => 'درصد مالیات اداره پست، پیشفرض : 9 درصد',
+                'default'     => 9
+            ),
+            'source_state'       => array(
+                'title'       => 'استان مبدا (فروشنده)',
+                'type'        => 'select',
+                'description' => 'لطفا در این قسمت استانی که محصولات از آنجا ارسال می شوند را انتخاب نمائید',
+                'options'     => wp_list_pluck( $states, 'name', 'term_id' )
+            ),
+            'img_url'            => array(
+                'title'       => 'تصویر روش حمل و نقل',
+                'type'        => 'text',
+                'description' => 'آدرس تصویر مورد نظر برای این روش حمل و نقل را وارد کنید',
+                'default'     => '',
+                'css'         => 'direction: ltr;'
+            )
+        );
     }
 
     public function is_enabled() {
         return 'yes' === $this->get_option( 'enabled', 'no' );
     }
 
-    public function calculate_shipping( $package = [] ) {
+    public function calculate_shipping( $package = array() ) {
 
-        if( empty( $package ) || $package['destination']['country'] != 'IR' || !is_numeric( $package['destination']['state'] ) ) {
+        if( empty( $package ) || $package['destination']['country'] != 'IR' || ! is_numeric( $package['destination']['state'] ) ) {
             return false;
         }
 
         $price = "";
         $terms = PWS()->get_terms_option( $package['destination']['district'] !== 0 ? $package['destination']['district'] : $package['destination']['city'] );
 
-        foreach( (array) $terms as $term )
+        foreach( (array) $terms as $term ) {
             if( $term['custom_cost'] != "" ) {
                 $price = $term['custom_cost'];
                 break;
             }
+        }
 
         if( $price !== "" ) {
-            $this->add_rate( [ 'id'    => $this->get_rate_id(),
-                               'label' => $this->title,
-                               'cost'  => $price ] );
+            $this->add_rate( array(
+                'id'    => $this->get_rate_id(),
+                'label' => $this->title,
+                'cost'  => $price
+            ) );
 
             return true;
         }
@@ -156,9 +181,11 @@ class WC_Custom_Method extends WC_Shipping_Method {
         $shipping_total += ceil( ( $shipping_total * absint( $this->extra_cost_percent ) ) / 100 );
         $shipping_total += absint( $this->extra_cost );
 
-        $rate = apply_filters( 'pws_add_rate', [ 'id'    => $this->get_rate_id(),
-                                                 'label' => $this->title,
-                                                 'cost'  => PWS()->convert_currency( $shipping_total ) ], $package, $this );
+        $rate = apply_filters( 'pws_add_rate', array(
+            'id'    => $this->get_rate_id(),
+            'label' => $this->title,
+            'cost'  => PWS()->convert_currency( $shipping_total )
+        ), $package, $this );
 
         $this->add_rate( $rate );
     }

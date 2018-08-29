@@ -3,7 +3,7 @@ Contributors: mahdiy
 Tags: woocommerce,shipping,persian woocommerce,persian
 Donate link: http://sabira.ir/donate?rel=persian-woocommerce-shipping
 Requires at least: 4.6
-Tested up to: 4.7
+Tested up to: 4.8.3
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -23,7 +23,7 @@ Powerful shipping plugin for woocommerce
 * و ...
 
 = سازگاری =
-* Woocommece 3.0.x
+* Woocommece 3.2.x
 * Wordpress 4.x
 
 == Installation ==
@@ -51,6 +51,12 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 0.9.1 =
+* Fix: save Country / State setting
+* Tweak: Compatibility with woocommerce 3.2.2
+= 0.9 =
+* Tweak: Compatibility with woocommerce 3.2.1
+* Tweak: Add action for cities
 = 0.8.8 =
 * Tweak: Compatibility with woocommerce 3.0.7
 * Tweak: Add filter for rates
@@ -68,5 +74,7 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 * Start, First version of plugin
 
 == Upgrade Notice ==
+= 0.9.1 =
+* مشکل ذخیره کشور و استان آدرس فروشگاه حل شد
 = 0.8.6 =
 * در صورتی که پس از بروزرسانی افزونه، نرخ بیمه روش های پستی از 5000 ریال به 6500 ریال بروزرسانی نشد، اینکار را بصورت دستی انجام دهید
