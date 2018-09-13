@@ -52,6 +52,9 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 1.0 =
+* Tweak: Improve speed of loading state & city
+* Tweak: Compatibility with woocommerce 3.4.5
 = 0.9.1 =
 * Fix: save Country / State setting
 * Tweak: Compatibility with woocommerce 3.2.2
