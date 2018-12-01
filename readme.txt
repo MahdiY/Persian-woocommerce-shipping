@@ -1,7 +1,7 @@
-=== Persian Woocommerce Shipping ===
+=== افزونه حمل و نقل ووکامرس ===
 Contributors: mahdiy
 Tags: woocommerce,shipping,persian woocommerce,persian
-Donate link: http://sabira.ir/donate?rel=persian-woocommerce-shipping
+Donate link: http://donate.woocommerce.ir/persian-woocommerce-shipping/
 Requires at least: 4.6
 Tested up to: 4.9.8
 Stable tag: trunk
@@ -20,12 +20,16 @@ Powerful shipping plugin for woocommerce
 * قابلیت افزودن هزینه ثابت یا درصدی به قیمت نهایی
 * محاسبه اتوماتیک هزینه پست پیشتاز و سفارشی بر اساس وزن
 * سازگار با چهار واحد پولی ایران در ووکامرس
+* سازگار با تمامی افزونه های فاکتور و برچسب ساز
 * و ...
 
 = سازگاری =
-* Woocommece 3.4.x
+* Woocommece 3.5.x
 * Wordpress 4.x
 * PHP 5.6.* & 7.*
+
+= مستندات =
+شما می توانید مستندات فنی این افزونه را از [اینجا](https://mahdiy.gitbook.io/persian-woocommerce-shipping) مشاهده کنید.
 
 == Installation ==
 = نصب =
@@ -39,6 +43,9 @@ Powerful shipping plugin for woocommerce
 * برای عملکرد بهتر افزونه گزینه "فعال کردن محاسبه‌گر هزینه ارسال در برگه سبدخرید" را غیرفعال کنید
 * توصیه می شود گزینه "هزینه حمل كالا را تا زمانی كه خریدار آدرس خود را وارد نكرده است نمایش نده" را فعال کنید
 
+= Documents =
+
+Read more document in [Persian Woocommerce Shipping Documents](https://mahdiy.gitbook.io/persian-woocommerce-shipping).
 
 == Frequently Asked Questions ==
 Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/persian-woocommerce-shipping).
@@ -52,6 +59,16 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 1.1 =
+* Fix: Save name of state & city instead of IDs
+* Fix: validation of state & city IDs
+* Tweak: Add pws_city_class & pws_district_class filters
+* Tweak: Add pws_city_priority & pws_district_priority filters
+* Tweak: Compatibility with all invoice and ticket generators
+* Tweak: Lunch documents on https://mahdiy.gitbook.io/persian-woocommerce-shipping
+= 1.0 =
+* Tweak: Improve speed of loading state & city
+* Tweak: Compatibility with woocommerce 3.4.5
 = 0.9.1 =
 * Fix: save Country / State setting
 * Tweak: Compatibility with woocommerce 3.2.2
