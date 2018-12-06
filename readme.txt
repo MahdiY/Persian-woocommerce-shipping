@@ -8,7 +8,7 @@ Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Powerful shipping plugin for woocommerce
+ارسال مرسوله های ووکامرس از طریق پست پیشتاز، سفارشی، پیک موتوری و تیپاکس با محاسبه خودکار تعرفه
 
 == Description ==
 با استفاده از این افزونه می توانید با روش های ارسال پستی متنوع، محصولات فیزیکی ووکامرس خود را به فروش بگذارید.
@@ -59,6 +59,9 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 1.1.1 =
+* Fix: validation of state & city IDs for virtual products
+* Tweak: Compatibility with woocommerce 3.5.2
 = 1.1 =
 * Fix: Save name of state & city instead of IDs
 * Fix: validation of state & city IDs

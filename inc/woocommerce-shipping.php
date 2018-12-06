@@ -491,26 +491,24 @@ class Persian_Woocommerce_Shipping {
 
 		$types = $this->types();
 
+		$fields = array(
+			'state'    => 'استان',
+			'city'     => 'شهر',
+			'district' => 'محله',
+		);
+
 		foreach ( $types as $type ) {
 
-			$state = get_term( intval( $_POST[ $type . '_state' ] ) );
+			foreach ( $fields as $field => $name ) {
 
-			if ( is_wp_error( $state ) || is_null( $state ) ) {
-				wc_add_notice( 'استان انتخاب شده معتبر نمی باشد.', 'error' );
-			}
+				if ( isset( $_POST[ $type . '_' . $field ] ) ) {
 
-			$city = get_term( intval( $_POST[ $type . '_city' ] ) );
+					$term = get_term( intval( $_POST[ $type . '_' . $field ] ) );
 
-			if ( is_wp_error( $city ) || is_null( $city ) ) {
-				wc_add_notice( 'شهر انتخاب شده معتبر نمی باشد.', 'error' );
-			}
+					if ( is_wp_error( $term ) || is_null( $term ) ) {
+						wc_add_notice( $name . ' انتخاب شده معتبر نمی باشد.', 'error' );
+					}
 
-			if ( isset( $_POST[ $type . '_district' ] ) ) {
-
-				$district = get_term( intval( $_POST[ $type . '_district' ] ) );
-
-				if ( is_wp_error( $district ) || is_null( $district ) ) {
-					wc_add_notice( 'محله انتخاب شده معتبر نمی باشد.', 'error' );
 				}
 
 			}
