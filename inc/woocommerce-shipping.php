@@ -183,66 +183,66 @@ class Persian_Woocommerce_Shipping {
 
 		?>
         <script type="text/javascript">
-			var sabira_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
+            var sabira_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
 
-			jQuery(document).ready(function ( $ ) {
+            jQuery(document).ready(function ($) {
 
 				<?php foreach( $types as $type ) { ?>
 
-				function <?php echo $type; ?>_sabira_state_changed() {
-					var data = {
-						'action': 'sabira_load_cities',
-						'state_id': $('#<?php echo $type; ?>_state').val(),
-						'name': '<?php echo $type; ?>'
-					};
+                function <?php echo $type; ?>_sabira_state_changed() {
+                    var data = {
+                        'action': 'sabira_load_cities',
+                        'state_id': $('#<?php echo $type; ?>_state').val(),
+                        'name': '<?php echo $type; ?>'
+                    };
 
-					$.post(sabira_ajax_url, data, function ( response ) {
-						if( response == "" )
-							response = "<option value='0'><?php _e( 'لطفا استان خود را انتخاب کنید' ); ?><option>";
-						$('select#<?php echo $type; ?>_sabira_cities').html(response);
-						$('body').trigger('pws_city_loaded');
-					});
+                    $.post(sabira_ajax_url, data, function (response) {
+                        if (response == "")
+                            response = "<option value='0'><?php _e( 'لطفا استان خود را انتخاب کنید' ); ?><option>";
+                        $('select#<?php echo $type; ?>_sabira_cities').html(response);
+                        $('body').trigger('pws_city_loaded');
+                    });
 
-					$('select#<?php echo $type; ?>_sabira_cities').select2();
-					$('p#<?php echo $type; ?>_sabira_district_field').slideUp();
-					$('select#<?php echo $type; ?>_sabira_district').html("");
-				}
+                    $('select#<?php echo $type; ?>_sabira_cities').select2();
+                    $('p#<?php echo $type; ?>_sabira_district_field').slideUp();
+                    $('select#<?php echo $type; ?>_sabira_district').html("");
+                }
 
-				$('body').on('change', 'select#<?php echo $type; ?>_state, input#<?php echo $type; ?>_state', function () {
+                $('body').on('change', 'select#<?php echo $type; ?>_state, input#<?php echo $type; ?>_state', function () {
 					<?php echo $type; ?>_sabira_state_changed();
-				});
+                });
 
-				function <?php echo $type; ?>_sabira_city_changed() {
-					var data = {
-						'action': 'sabira_load_districts',
-						'city_id': $('#<?php echo $type; ?>_sabira_cities').val(),
-						'name': '<?php echo $type; ?>'
-					};
+                function <?php echo $type; ?>_sabira_city_changed() {
+                    var data = {
+                        'action': 'sabira_load_districts',
+                        'city_id': $('#<?php echo $type; ?>_sabira_cities').val(),
+                        'name': '<?php echo $type; ?>'
+                    };
 
-					$.post(sabira_ajax_url, data, function ( response ) {
-						if( response == "" )
-							$('p#<?php echo $type; ?>_sabira_district_field').slideUp();
-						else
-							$('p#<?php echo $type; ?>_sabira_district_field').slideDown();
+                    $.post(sabira_ajax_url, data, function (response) {
+                        if (response == "")
+                            $('p#<?php echo $type; ?>_sabira_district_field').slideUp();
+                        else
+                            $('p#<?php echo $type; ?>_sabira_district_field').slideDown();
 
-						$('select#<?php echo $type; ?>_sabira_district').html(response);
-						$('body').trigger('update_checkout');
-						$('body').trigger('pws_city_loaded');
-					});
+                        $('select#<?php echo $type; ?>_sabira_district').html(response);
+                        $('body').trigger('update_checkout');
+                        $('body').trigger('pws_city_loaded');
+                    });
 
-					$('select#<?php echo $type; ?>_sabira_district').select2();
-				}
+                    $('select#<?php echo $type; ?>_sabira_district').select2();
+                }
 
-				$('body').on('change', 'select#<?php echo $type; ?>_sabira_cities, input#<?php echo $type; ?>_sabira_cities', function () {
+                $('body').on('change', 'select#<?php echo $type; ?>_sabira_cities, input#<?php echo $type; ?>_sabira_cities', function () {
 					<?php echo $type; ?>_sabira_city_changed();
-				});
+                });
 
 				<?php echo $type; ?>_sabira_state_changed();
 				<?php echo $type; ?>_sabira_city_changed();
 
 				<?php } ?>
 
-			});
+            });
         </script>
         <style>
             .woocommerce form .form-row .select2-container {
@@ -501,7 +501,7 @@ class Persian_Woocommerce_Shipping {
 
 			foreach ( $fields as $field => $name ) {
 
-				if ( isset( $_POST[ $type . '_' . $field ] ) ) {
+				if ( isset( $_POST[ $type . '_' . $field ] ) && ! empty( $_POST[ $type . '_' . $field ] ) ) {
 
 					$term = get_term( intval( $_POST[ $type . '_' . $field ] ) );
 
