@@ -3,7 +3,7 @@ Contributors: mahdiy
 Tags: woocommerce,shipping,persian woocommerce,persian
 Donate link: http://donate.woocommerce.ir/persian-woocommerce-shipping/
 Requires at least: 4.6
-Tested up to: 5.1
+Tested up to: 5.2.2
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -24,7 +24,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 * و ...
 
 = سازگاری =
-* Woocommece 3.5.*
+* Woocommece 3.5.* & 3.6.*
 * Wordpress 4.* & 5.*
 * PHP 5.6.* & 7.*
 
@@ -59,6 +59,10 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 1.2 =
+* Fix: Default city and district field priority
+* Tweak: Compatibility with checkout manager plguins
+* Tweak: Compatibility with Wordpress 5.2.2
 = 1.1.2 =
 * Fix: validation of state & city IDs for empty data
 * Tweak: Compatibility with Wordpress 5.1
