@@ -1,29 +1,49 @@
 <?php
-/*
-Plugin Name: افزونه حمل و نقل ووکامرس
-Plugin URI: http://MahdiY.ir
-Description: افزونه قدرتمند حمل و نقل ووکامرس با قابلیت ارسال از طریق پست پیشتاز، سفارشی، پیک موتوری و تیپاکس
-Version: 1.2
-Author: MahdiY
-Author URI: http://MahdiY.ir
-WC requires at least: 3.0.0
-WC tested up to: 3.6.5
-*/
+/**
+ * Plugin Name: افزونه حمل و نقل ووکامرس
+ * Plugin URI: http://MahdiY.ir
+ * Description: افزونه قدرتمند حمل و نقل ووکامرس با قابلیت ارسال از طریق پست پیشتاز، سفارشی، پیک موتوری و تیپاکس
+ * Version: 2.0.5
+ * Author: MahdiY
+ * Author URI: http://MahdiY.ir
+ * WC requires at least: 3.0.0
+ * WC tested up to: 4.0.1
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
-include( "inc/state_city.php" );
-include( "inc/taxonomy-shipping.php" );
-include( "inc/woocommerce-shipping.php" );
+include( "includes/class-pws.php" );
+include( "includes/class-ajax.php" );
+include( "includes/class-tapin.php" );
+include( "includes/class-tools.php" );
+include( "includes/class-status.php" );
 
-define( 'PWS_VERSION', '1.2' );
+if ( ! PWS_Tapin::is_enable() ) {
+	include( "data/state_city.php" );
+	include( "includes/taxonomy-shipping.php" );
+}
+
+if ( ! defined( 'PWS_VERSION' ) ) {
+	define( 'PWS_VERSION', '2.0.5' );
+}
+
+if ( ! defined( 'PWS_DIR' ) ) {
+	define( 'PWS_DIR', __DIR__ );
+}
+
+if ( ! defined( 'PWS_FILE' ) ) {
+	define( 'PWS_FILE', __FILE__ );
+}
 
 function PWS() {
-	return Persian_Woocommerce_Shipping::instance();
+
+	if ( PWS_Tapin::is_enable() ) {
+		return PWS_Tapin::instance();
+	}
+
+	return PWS_Core::instance();
 }
 
 $GLOBALS['PWS'] = PWS();
-
-register_activation_hook( __FILE__, array( 'Persian_Woocommerce_Shipping', 'install' ) );

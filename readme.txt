@@ -2,8 +2,9 @@
 Contributors: mahdiy
 Tags: woocommerce,shipping,persian woocommerce,persian
 Donate link: http://donate.woocommerce.ir/persian-woocommerce-shipping/
-Requires at least: 4.6
-Tested up to: 5.2.2
+Requires at least: 5.0
+Tested up to: 5.4
+Requires PHP: 7.0
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -15,18 +16,20 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 = امکانات =
 * دارای چهار روش ارسال: پیشتاز، سفارشی، تیپاکس و پیک موتوری
+* قابلیت اتصال به پیشخوان مجازی پست
+* ابزارهای کاربردی برای مدیریت حمل و نقل
 * قابلیت افزودن بی نهایت استان، شهر و محله
 * قابلیت شخصی سازی کامل قیمت ها برای هر آدرس
 * قابلیت افزودن هزینه ثابت یا درصدی به قیمت نهایی
-* محاسبه اتوماتیک هزینه پست پیشتاز و سفارشی بر اساس وزن
+* محاسبه اتوماتیک هزینه پست پیشتاز و سفارشی بر اساس وزن (تعرفه سال 1398)
 * سازگار با چهار واحد پولی ایران در ووکامرس
 * سازگار با تمامی افزونه های فاکتور و برچسب ساز
 * و ...
 
 = سازگاری =
-* Woocommece 3.5.* & 3.6.*
-* Wordpress 4.* & 5.*
-* PHP 5.6.* & 7.*
+* Woocommerce 3.9.*, 4.*
+* Wordpress 5.*
+* PHP 7.*
 
 = مستندات =
 شما می توانید مستندات فنی این افزونه را از [اینجا](https://mahdiy.gitbook.io/persian-woocommerce-shipping) مشاهده کنید.
@@ -48,7 +51,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Read more document in [Persian Woocommerce Shipping Documents](https://mahdiy.gitbook.io/persian-woocommerce-shipping).
 
 == Frequently Asked Questions ==
-Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/persian-woocommerce-shipping).
+Ask your questions in [Persian Woocommerce Shipping](http://mahdiy.ir/plugins/persian-woocommerce-shipping).
 
 == Screenshots ==
 
@@ -59,6 +62,40 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 2.0.5 =
+* Fix: Apply free shipping in methods
+* Improve: Add rate function
+= 2.0.4 =
+* Fix: Compatibility with php 7.0
+* Improve: File names & check constants before define
+= 2.0.3 =
+* Fix: Fix tapin method settings
+* Fix: Courier method destination for tapin
+* Fix: Posteketab credit
+= 2.0.2 =
+* Fix: Edit shipping methods title
+* Tweak: Add filter for default state, city, district
+= 2.0.1 =
+* Fix: Check PW function is exists (persian woocommerce is active) to enable tools
+= 2.0.0 =
+* Tweak: Add tapin (Virtual post panel)
+* Tweak: Add IR post standard cities list
+* Tweak: Add tools page and three practical tools for store management
+* Tweak: Save selected city for no logged in users
+* Tweak: New Courier method + select city to show method
+* Tweak: Add cities list to edit address in admin panel
+* Tweak: Compatibility with woocommerce 4.0.0
+* Improve: Courier & Tipax calculation algorithm
+* Improve: Cache states and cities list to increase speed in checkout page
+* Improve: Decrease number of requests in checkout page
+* Fix: Select default city on load cities list
+* Fix: Some reported bugs in persian script forums
+= 1.2.3 =
+* Tweak: Updated Post Prices 1398 (new)
+= 1.2.2 =
+* Tweak: Updated Post Prices 1398
+= 1.2.1 =
+* Tweak: Compatibility with woocommerce 3.7.0
 = 1.2 =
 * Fix: Default city and district field priority
 * Tweak: Compatibility with checkout manager plguins
@@ -102,7 +139,11 @@ Ask your questions in [Persian Woocommerce Shipping](http://sabira.ir/plugins/pe
 * Start, First version of plugin
 
 == Upgrade Notice ==
+= 2.0.0 =
+* این نسخه دارای تغییرات بنیادی است. لطفا قبل از بروزرسانی از پایگاه داده خود بکاپ تهیه کنید.
+= 1.2.1 =
+* سازگاری با ووکامرس 3.7.0
 = 0.9.1 =
 * مشکل ذخیره کشور و استان آدرس فروشگاه حل شد
 = 0.8.6 =
-* در صورتی که پس از بروزرسانی افزونه، نرخ بیمه روش های پستی از 5000 ریال به 6500 ریال بروزرسانی نشد، اینکار را بصورت دستی انجام دهید
+* در صورتی که پس از بروزرسانی افزونه، نرخ بیمه روش های پستی از 5000 ریال به 8000 ریال بروزرسانی نشد، اینکار را بصورت دستی انجام دهید

@@ -5,7 +5,7 @@
  * E-Mail    : M@hdiY.IR
  */
 
-class Persian_Woocommerce_Shipping {
+class PWS_Core {
 
 	public $selected_city = array();
 
@@ -19,15 +19,15 @@ class Persian_Woocommerce_Shipping {
 	/**
 	 * The single instance of the class.
 	 *
-	 * @var Persian_Woocommerce_Shipping
+	 * @var PWS_Core
 	 */
 	protected static $_instance = null;
 
 	/**
-	 * Ensures only one instance of ersian_Woocommerce_Shipping is loaded or can be loaded.
+	 * Ensures only one instance of PWS_Core is loaded or can be loaded.
 	 *
 	 * @see PWS()
-	 * @return Persian_Woocommerce_Shipping
+	 * @return PWS_Core
 	 */
 	public static function instance() {
 
@@ -39,16 +39,16 @@ class Persian_Woocommerce_Shipping {
 	}
 
 	/**
-	 * Persian_Woocommerce_Shipping constructor.
+	 * PWS_Core constructor.
 	 */
 	public function __construct() {
 
-		self::$methods = array(
+		self::$methods = [
 			'WC_Courier_Method',
 			'WC_Custom_Method',
 			'WC_Forehand_Method',
 			'WC_Tipax_Method',
-		);
+		];
 
 		$this->init_hooks();
 	}
@@ -56,15 +56,15 @@ class Persian_Woocommerce_Shipping {
 	/**
 	 * Hook into actions and filters.
 	 */
-	private function init_hooks() {
+	protected function init_hooks() {
 		// Actions
 		add_action( 'init', array( $this, 'state_city_taxonomy' ), 0 );
 		add_action( 'admin_menu', array( $this, 'state_city_admin_menu' ) );
 		add_action( 'woocommerce_after_order_notes', array( $this, 'load_child_term' ) );
-		add_action( 'wp_ajax_sabira_load_cities', array( $this, 'sabira_load_cities_callback' ) );
-		add_action( 'wp_ajax_nopriv_sabira_load_cities', array( $this, 'sabira_load_cities_callback' ) );
-		add_action( 'wp_ajax_sabira_load_districts', array( $this, 'sabira_load_districts_callback' ) );
-		add_action( 'wp_ajax_nopriv_sabira_load_districts', array( $this, 'sabira_load_districts_callback' ) );
+		add_action( 'wp_ajax_mahdiy_load_cities', array( PWS_Ajax::class, 'load_cities_callback' ) );
+		add_action( 'wp_ajax_nopriv_mahdiy_load_cities', array( PWS_Ajax::class, 'load_cities_callback' ) );
+		add_action( 'wp_ajax_mahdiy_load_districts', array( PWS_Ajax::class, 'load_districts_callback' ) );
+		add_action( 'wp_ajax_nopriv_mahdiy_load_districts', array( PWS_Ajax::class, 'load_districts_callback' ) );
 		add_action( 'woocommerce_shipping_init', array( $this, 'load_shipping_init' ) );
 		add_action( 'woocommerce_admin_field_pws_single_select_country', array(
 			$this,
@@ -80,18 +80,12 @@ class Persian_Woocommerce_Shipping {
 		add_filter( 'woocommerce_checkout_fields', array( $this, 'edit_checkout_cities_field' ), 20, 1 );
 		add_filter( 'woocommerce_checkout_update_order_meta', array( $this, 'checkout_update_order_meta' ), 20, 1 );
 		add_filter( 'woocommerce_checkout_process', array( $this, 'checkout_process' ), 20, 1 );
-		add_filter( 'woocommerce_form_field_billing_sabira_cities', array( $this, 'checkout_cities_field' ), 11, 4 );
-		add_filter( 'woocommerce_form_field_shipping_sabira_cities', array( $this, 'checkout_cities_field' ), 11, 4 );
-		add_filter( 'woocommerce_form_field_billing_sabira_district', array( $this, 'checkout_cities_field' ), 11, 4 );
-		add_filter( 'woocommerce_form_field_shipping_sabira_district', array( $this, 'checkout_cities_field' ), 11, 4 );
-		add_filter( 'woocommerce_cart_shipping_packages', array(
-			$this,
-			'add_district_cart_shipping_packages'
-		), 10, 1 );
-		add_filter( 'woocommerce_cart_shipping_method_full_label', array(
-			$this,
-			'add_image_before_shipping_labels'
-		), 10, 2 );
+		add_filter( 'woocommerce_form_field_billing_mahdiy_cities', array( $this, 'checkout_cities_field' ), 11, 4 );
+		add_filter( 'woocommerce_form_field_shipping_mahdiy_cities', array( $this, 'checkout_cities_field' ), 11, 4 );
+		add_filter( 'woocommerce_form_field_billing_mahdiy_district', array( $this, 'checkout_cities_field' ), 11, 4 );
+		add_filter( 'woocommerce_form_field_shipping_mahdiy_district', array( $this, 'checkout_cities_field' ), 11, 4 );
+		add_filter( 'woocommerce_cart_shipping_packages', array( $this, 'cart_shipping_packages' ), 10, 1 );
+		add_filter( 'woocommerce_cart_shipping_method_full_label', array( $this, 'shipping_method_image' ), 10, 2 );
 		add_filter( 'woocommerce_localisation_address_formats', array( $this, 'localisation_address_formats' ), 20, 1 );
 		add_filter( 'woocommerce_order_formatted_shipping_address', array(
 			$this,
@@ -183,65 +177,65 @@ class Persian_Woocommerce_Shipping {
 
 		?>
         <script type="text/javascript">
-			var sabira_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-
+			var mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
+			
 			jQuery(document).ready(function ( $ ) {
 
 				<?php foreach( $types as $type ) { ?>
-
-				function <?php echo $type; ?>_sabira_state_changed() {
+				
+				function <?php echo $type; ?>_mahdiy_state_changed() {
 					var data = {
-						'action': 'sabira_load_cities',
+						'action': 'mahdiy_load_cities',
 						'state_id': $('#<?php echo $type; ?>_state').val(),
 						'name': '<?php echo $type; ?>'
 					};
-
-					$.post(sabira_ajax_url, data, function ( response ) {
+					
+					$.post(mahdiy_ajax_url, data, function ( response ) {
 						if( response == "" )
 							response = "<option value='0'><?php _e( 'لطفا استان خود را انتخاب کنید' ); ?><option>";
-						$('select#<?php echo $type; ?>_sabira_cities').html(response);
+						$('select#<?php echo $type; ?>_mahdiy_cities').html(response);
 						$('body').trigger('pws_city_loaded');
 					});
-
-					$('select#<?php echo $type; ?>_sabira_cities').select2();
-					$('p#<?php echo $type; ?>_sabira_district_field').slideUp();
-					$('select#<?php echo $type; ?>_sabira_district').html("");
+					
+					$('select#<?php echo $type; ?>_mahdiy_cities').select2();
+					$('p#<?php echo $type; ?>_mahdiy_district_field').slideUp();
+					$('select#<?php echo $type; ?>_mahdiy_district').html("");
 				}
-
+				
 				$('body').on('change', 'select#<?php echo $type; ?>_state, input#<?php echo $type; ?>_state', function () {
-					<?php echo $type; ?>_sabira_state_changed();
+					<?php echo $type; ?>_mahdiy_state_changed();
 				});
-
-				function <?php echo $type; ?>_sabira_city_changed() {
+				
+				function <?php echo $type; ?>_mahdiy_city_changed() {
 					var data = {
-						'action': 'sabira_load_districts',
-						'city_id': $('#<?php echo $type; ?>_sabira_cities').val(),
+						'action': 'mahdiy_load_districts',
+						'city_id': $('#<?php echo $type; ?>_mahdiy_cities').val(),
 						'name': '<?php echo $type; ?>'
 					};
-
-					$.post(sabira_ajax_url, data, function ( response ) {
+					
+					$.post(mahdiy_ajax_url, data, function ( response ) {
 						if( response == "" )
-							$('p#<?php echo $type; ?>_sabira_district_field').slideUp();
+							$('p#<?php echo $type; ?>_mahdiy_district_field').slideUp();
 						else
-							$('p#<?php echo $type; ?>_sabira_district_field').slideDown();
-
-						$('select#<?php echo $type; ?>_sabira_district').html(response);
+							$('p#<?php echo $type; ?>_mahdiy_district_field').slideDown();
+						
+						$('select#<?php echo $type; ?>_mahdiy_district').html(response);
 						$('body').trigger('update_checkout');
 						$('body').trigger('pws_city_loaded');
 					});
-
-					$('select#<?php echo $type; ?>_sabira_district').select2();
+					
+					$('select#<?php echo $type; ?>_mahdiy_district').select2();
 				}
-
-				$('body').on('change', 'select#<?php echo $type; ?>_sabira_cities, input#<?php echo $type; ?>_sabira_cities', function () {
-					<?php echo $type; ?>_sabira_city_changed();
+				
+				$('body').on('change', 'select#<?php echo $type; ?>_mahdiy_cities, input#<?php echo $type; ?>_mahdiy_cities', function () {
+					<?php echo $type; ?>_mahdiy_city_changed();
 				});
 
-				<?php echo $type; ?>_sabira_state_changed();
-				<?php echo $type; ?>_sabira_city_changed();
+				<?php echo $type; ?>_mahdiy_state_changed();
+				<?php echo $type; ?>_mahdiy_city_changed();
 
 				<?php } ?>
-
+				
 			});
         </script>
         <style>
@@ -252,94 +246,12 @@ class Persian_Woocommerce_Shipping {
 		<?php
 	}
 
-	public function sabira_load_cities_callback() {
-
-		if ( ! isset( $_POST['state_id'] ) ) {
-			die();
-		}
-
-		$state_id = absint( $_POST['state_id'] );
-
-		if ( ! $state_id ) {
-			die();
-		}
-
-		$states = get_terms( array(
-			'taxonomy'   => 'state_city',
-			'hide_empty' => false,
-			'parent'     => $state_id
-		) );
-
-		if ( is_wp_error( $states ) ) {
-			die();
-		}
-
-		$term_id = 0;
-
-		if ( is_user_logged_in() ) {
-			$name    = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'billing' : 'shipping';
-			$term_id = get_user_meta( get_current_user_id(), $name . '_city', true );
-		}
-
-		$method = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'set_billing_state' : 'set_shipping_state';
-		WC()->customer->$method( $state_id );
-
-		foreach ( $states as $state ) {
-			printf( "<option value='%d' %s>%s</option>", $state->term_id, selected( $term_id, $state->term_id, false ), $state->name );
-		}
-
-		die();
-	}
-
-	public function sabira_load_districts_callback() {
-
-		if ( ! isset( $_POST['city_id'] ) ) {
-			die();
-		}
-
-		$city_id = absint( $_POST['city_id'] );
-
-		if ( ! $city_id ) {
-			die();
-		}
-
-		$cities = get_terms( array(
-			'taxonomy'   => 'state_city',
-			'hide_empty' => false,
-			'child_of'   => $city_id
-		) );
-
-		if ( is_wp_error( $cities ) ) {
-			die();
-		}
-
-		$term_id = 0;
-
-		if ( is_user_logged_in() ) {
-			$name    = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'billing' : 'shipping';
-			$term_id = get_user_meta( get_current_user_id(), $name . '_district', true );
-		}
-
-		$method = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'set_billing_city' : 'set_shipping_city';
-		WC()->customer->$method( $city_id );
-
-		if ( count( $cities ) ) {
-			$city = get_term( $city_id, 'state_city' );
-			printf( "<option value='%d' %s>%s</option>", $city->term_id, selected( $term_id, $city->term_id, false ), $city->name );
-		}
-
-		foreach ( $cities as $city ) {
-			printf( "<option value='%d' %s>%s</option>", $city->term_id, selected( $term_id, $city->term_id, false ), str_repeat( "- ", count( get_ancestors( $city->term_id, 'state_city' ) ) - 2 ) . $city->name );
-		}
-
-		die();
-	}
-
 	public function load_shipping_init() {
-		include plugin_dir_path( __FILE__ ) . 'courier-method.php';
-		include plugin_dir_path( __FILE__ ) . 'custom-method.php';
-		include plugin_dir_path( __FILE__ ) . 'forehand-method.php';
-		include plugin_dir_path( __FILE__ ) . 'tipax-method.php';
+		include PWS_DIR . '/methods/courier-method.php';
+		include PWS_DIR . '/methods/custom-method.php';
+		include PWS_DIR . '/methods/forehand-method.php';
+		include PWS_DIR . '/methods/tipax-method.php';
+		include PWS_DIR . '/methods/tapin-method.php';
 	}
 
 	public function pws_single_select_country( $value ) {
@@ -380,7 +292,6 @@ class Persian_Woocommerce_Shipping {
 		}
 
 		return $methods;
-
 	}
 
 	public function get_settings_general( $settings ) {
@@ -398,13 +309,7 @@ class Persian_Woocommerce_Shipping {
 
 	public function iran_states( $states ) {
 
-		$_states = get_terms( array(
-			'taxonomy'   => 'state_city',
-			'hide_empty' => false,
-			'parent'     => 0
-		) );
-
-		$states['IR'] = wp_list_pluck( $_states, 'name', 'term_id' );
+		$states['IR'] = PWS()::states();
 
 		return $states;
 
@@ -442,22 +347,22 @@ class Persian_Woocommerce_Shipping {
 			$fields[ $type ][ $type . '_postcode' ]['clear'] = false;
 
 			$fields[ $type ][ $type . '_city' ] = array(
-				'type'        => $type . '_sabira_cities',
+				'type'        => $type . '_mahdiy_cities',
 				'label'       => 'شهر',
 				'placeholder' => __( 'یک شهر انتخاب کنید' ),
 				'required'    => true,
-				'id'          => $type . '_sabira_cities',
+				'id'          => $type . '_mahdiy_cities',
 				'class'       => apply_filters( 'pws_city_class', $class ),
 				'default'     => 0,
 				'priority'    => apply_filters( 'pws_city_priority', $fields[ $type ][ $type . '_city' ]['priority'] ),
 			);
 
 			$fields[ $type ][ $type . '_district' ] = array(
-				'type'        => $type . '_sabira_district',
+				'type'        => $type . '_mahdiy_district',
 				'label'       => 'محله',
 				'placeholder' => __( 'یک محله انتخاب کنید' ),
 				'required'    => false,
-				'id'          => $type . '_sabira_district',
+				'id'          => $type . '_mahdiy_district',
 				'class'       => apply_filters( 'pws_district_class', $class ),
 				'clear'       => true,
 				'default'     => 0,
@@ -525,7 +430,7 @@ class Persian_Woocommerce_Shipping {
 		$field_html = '';
 		$options    = array();
 
-		if ( $args['type'] == 'billing_sabira_cities' || $args['type'] == 'shipping_sabira_cities' ) {
+		if ( $args['type'] == 'billing_mahdiy_cities' || $args['type'] == 'shipping_mahdiy_cities' ) {
 
 			$state_cc = WC()->checkout->get_value( 'billing_city' === $key ? 'billing_state' : 'shipping_state' );
 
@@ -537,7 +442,7 @@ class Persian_Woocommerce_Shipping {
 				) );
 			}
 
-		} elseif ( $args['type'] == 'billing_sabira_district' || $args['type'] == 'shipping_sabira_district' ) {
+		} elseif ( $args['type'] == 'billing_mahdiy_district' || $args['type'] == 'shipping_mahdiy_district' ) {
 
 			$city_cc = WC()->checkout->get_value( 'billing_district' === $key ? 'billing_city' : 'shipping_city' );
 
@@ -587,9 +492,9 @@ class Persian_Woocommerce_Shipping {
 				<option value="">' . esc_attr( $args['placeholder'] ) . '&hellip;</option>';
 
 			foreach ( $options as $option ) {
-				if ( $args['type'] == 'billing_sabira_cities' || $args['type'] == 'shipping_sabira_cities' ) {
+				if ( $args['type'] == 'billing_mahdiy_cities' || $args['type'] == 'shipping_mahdiy_cities' ) {
 					$field .= '<option value="' . esc_attr( $option->term_id ) . '" ' . selected( $value, $option->term_id, false ) . '>' . $option->name . '</option>';
-				} elseif ( $args['type'] == 'billing_sabira_district' || $args['type'] == 'shipping_sabira_district' ) {
+				} elseif ( $args['type'] == 'billing_mahdiy_district' || $args['type'] == 'shipping_mahdiy_district' ) {
 					$field .= '<option value="' . esc_attr( $option->term_id ) . '" ' . selected( $value, $option->term_id, false ) . '>' . str_repeat( "- ", count( get_ancestors( $option->term_id, 'state_city' ) ) - 2 ) . $option->name . '</option>';
 				}
 			}
@@ -617,30 +522,36 @@ class Persian_Woocommerce_Shipping {
 		return $field;
 	}
 
-	public function add_district_cart_shipping_packages( $packages ) {
+	public function cart_shipping_packages( $packages ) {
+
+		$type = 'billing';
 
 		if ( isset( $_POST['post_data'] ) ) {
 			parse_str( $_POST['post_data'], $data );
+
+			if ( isset( $data['ship_to_different_address'] ) && in_array( 'shipping', $this->types() ) ) {
+				$type = 'shipping';
+			}
+
+			if ( isset( $data[ $type . '_city' ] ) && strlen( $data[ $type . '_city' ] ) ) {
+				$packages[0]['destination']['city'] = $data[ $type . '_city' ];
+			}
 		}
 
-		if ( isset( $data['billing_city'] ) ) {
-			$packages[0]['destination']['city'] = $data['billing_city'];
+		$packages[0]['destination']['district'] = $data[ $type . '_district' ] ?? 0;
+
+		if ( isset( $_POST[ $type . '_city' ] ) && strlen( $_POST[ $type . '_city' ] ) ) {
+			$packages[0]['destination']['city'] = $_POST[ $type . '_city' ];
 		}
 
-		$packages[0]['destination']['district'] = isset( $data['billing_district'] ) ? $data['billing_district'] : 0;
-
-		if ( isset( $_POST['billing_city'] ) ) {
-			$packages[0]['destination']['city'] = $_POST['billing_city'];
-		}
-
-		if ( isset( $_POST['billing_district'] ) ) {
-			$packages[0]['destination']['district'] = $_POST['billing_district'];
+		if ( isset( $_POST[ $type . '_district' ] ) && strlen( $_POST[ $type . '_district' ] ) ) {
+			$packages[0]['destination']['district'] = $_POST[ $type . '_district' ];
 		}
 
 		return $packages;
 	}
 
-	public function add_image_before_shipping_labels( $label, $method ) {
+	public function shipping_method_image( $label, $method ) {
 
 		$method_id = str_replace( ':', '_', $method->id );
 		$option    = get_option( "woocommerce_{$method_id}_settings" );
@@ -661,14 +572,18 @@ class Persian_Woocommerce_Shipping {
 
 	public function order_formatted_shipping_address( $data, $args ) {
 
-		$data['district'] = get_post_meta( $args->get_id(), '_shipping_district', true );
+		if ( is_array( $data ) ) {
+			$data['district'] = get_post_meta( $args->get_id(), '_shipping_district', true );
+		}
 
 		return $data;
 	}
 
 	public function order_formatted_billing_address( $data, $args ) {
 
-		$data['district'] = get_post_meta( $args->get_id(), '_billing_district', true );
+		if ( is_array( $data ) ) {
+			$data['district'] = get_post_meta( $args->get_id(), '_billing_district', true );
+		}
 
 		return $data;
 	}
@@ -715,30 +630,6 @@ class Persian_Woocommerce_Shipping {
 
 	// Functions
 
-	public static function install() {
-
-		if ( class_exists( 'WC_Shipping_Zones' ) ) {
-
-			foreach ( WC_Shipping_Zones::get_zones() as $zone ) {
-
-				foreach ( $zone['shipping_methods'] as $instance_id => $method ) {
-
-					if ( in_array( $method->id, self::$methods ) ) {
-						$option_name = "woocommerce_{$method->id}_{$instance_id}_settings";
-						$settings    = get_option( $option_name );
-
-						if ( $settings != false && isset( $settings['insurance_cost'] ) ) {
-							$settings['insurance_cost'] = 6500;
-							update_option( $option_name, $settings );
-						}
-					}
-				}
-			}
-
-		}
-
-	}
-
 	public function types() {
 
 		$types = array( 'billing' );
@@ -748,6 +639,229 @@ class Persian_Woocommerce_Shipping {
 		}
 
 		return $types;
+	}
+
+	public static function states() {
+
+		$states = get_terms( array(
+			'taxonomy'   => 'state_city',
+			'hide_empty' => false,
+			'parent'     => 0
+		) );
+
+		return wp_list_pluck( $states, 'name', 'term_id' );
+	}
+
+	public static function cities( $state_id ) {
+
+		$cities = get_terms( array(
+			'taxonomy'   => 'state_city',
+			'hide_empty' => false,
+			'parent'     => $state_id
+		) );
+
+		if ( is_wp_error( $cities ) ) {
+			return [];
+		}
+
+		return array_column( $cities, 'name', 'term_id' );
+	}
+
+	public function check_states_beside( $source, $destination ) {
+
+		if ( $source == $destination ) {
+			return 'in';
+		}
+
+		$is_beside["AE"]["AW"] = true;
+		$is_beside["AE"]["AR"] = true;
+		$is_beside["AE"]["ZA"] = true;
+
+		$is_beside["AW"]["AE"] = true;
+		$is_beside["AW"]["KD"] = true;
+		$is_beside["AW"]["ZA"] = true;
+
+		$is_beside["AR"]["AE"] = true;
+		$is_beside["AR"]["GI"] = true;
+		$is_beside["AR"]["ZA"] = true;
+
+		$is_beside["IS"]["CM"] = true;
+		$is_beside["IS"]["LO"] = true;
+		$is_beside["IS"]["KB"] = true;
+		$is_beside["IS"]["MK"] = true;
+		$is_beside["IS"]["QM"] = true;
+		$is_beside["IS"]["SM"] = true;
+		$is_beside["IS"]["KJ"] = true;
+		$is_beside["IS"]["YA"] = true;
+		$is_beside["IS"]["FA"] = true;
+
+		$is_beside["AL"]["TE"] = true;
+		$is_beside["AL"]["MK"] = true;
+		$is_beside["AL"]["QZ"] = true;
+		$is_beside["AL"]["MN"] = true;
+
+		$is_beside["IL"]["BK"] = true;
+		$is_beside["IL"]["LO"] = true;
+		$is_beside["IL"]["KZ"] = true;
+
+		$is_beside["BU"]["KB"] = true;
+		$is_beside["BU"]["KZ"] = true;
+		$is_beside["BU"]["FA"] = true;
+		$is_beside["BU"]["HG"] = true;
+
+		$is_beside["TE"]["AL"] = true;
+		$is_beside["TE"]["MK"] = true;
+		$is_beside["TE"]["QM"] = true;
+		$is_beside["TE"]["MN"] = true;
+		$is_beside["TE"]["SM"] = true;
+
+		$is_beside["CM"]["KB"] = true;
+		$is_beside["CM"]["KZ"] = true;
+		$is_beside["CM"]["LO"] = true;
+		$is_beside["CM"]["IS"] = true;
+
+		$is_beside["KJ"]["SB"] = true;
+		$is_beside["KJ"]["KE"] = true;
+		$is_beside["KJ"]["YA"] = true;
+		$is_beside["KJ"]["IS"] = true;
+		$is_beside["KJ"]["SM"] = true;
+		$is_beside["KJ"]["KV"] = true;
+
+		$is_beside["KV"]["KJ"] = true;
+		$is_beside["KV"]["KS"] = true;
+		$is_beside["KV"]["SM"] = true;
+
+		$is_beside["KS"]["KV"] = true;
+		$is_beside["KS"]["GO"] = true;
+		$is_beside["KS"]["SM"] = true;
+
+		$is_beside["KZ"]["IL"] = true;
+		$is_beside["KZ"]["BU"] = true;
+		$is_beside["KZ"]["LO"] = true;
+		$is_beside["KZ"]["KB"] = true;
+		$is_beside["KZ"]["CM"] = true;
+
+		$is_beside["ZA"]["GI"] = true;
+		$is_beside["ZA"]["AR"] = true;
+		$is_beside["ZA"]["AE"] = true;
+		$is_beside["ZA"]["AW"] = true;
+		$is_beside["ZA"]["KD"] = true;
+		$is_beside["ZA"]["HD"] = true;
+		$is_beside["ZA"]["QZ"] = true;
+
+		$is_beside["SM"]["MN"] = true;
+		$is_beside["SM"]["TE"] = true;
+		$is_beside["SM"]["QM"] = true;
+		$is_beside["SM"]["IS"] = true;
+		$is_beside["SM"]["KS"] = true;
+		$is_beside["SM"]["KV"] = true;
+		$is_beside["SM"]["KJ"] = true;
+
+		$is_beside["SB"]["KJ"] = true;
+		$is_beside["SB"]["KE"] = true;
+		$is_beside["SB"]["HG"] = true;
+
+		$is_beside["FA"]["IS"] = true;
+		$is_beside["FA"]["YA"] = true;
+		$is_beside["FA"]["BU"] = true;
+		$is_beside["FA"]["HG"] = true;
+		$is_beside["FA"]["KB"] = true;
+		$is_beside["FA"]["KE"] = true;
+
+		$is_beside["QZ"]["ZA"] = true;
+		$is_beside["QZ"]["HD"] = true;
+		$is_beside["QZ"]["MK"] = true;
+		$is_beside["QZ"]["AL"] = true;
+		$is_beside["QZ"]["MN"] = true;
+		$is_beside["QZ"]["GI"] = true;
+
+		$is_beside["QM"]["TE"] = true;
+		$is_beside["QM"]["MK"] = true;
+		$is_beside["QM"]["SM"] = true;
+		$is_beside["QM"]["IS"] = true;
+
+		$is_beside["KD"]["AW"] = true;
+		$is_beside["KD"]["BK"] = true;
+		$is_beside["KD"]["HD"] = true;
+		$is_beside["KD"]["ZA"] = true;
+
+		$is_beside["KE"]["YA"] = true;
+		$is_beside["KE"]["FA"] = true;
+		$is_beside["KE"]["HG"] = true;
+		$is_beside["KE"]["SB"] = true;
+		$is_beside["KE"]["KJ"] = true;
+
+		$is_beside["BK"]["KD"] = true;
+		$is_beside["BK"]["HD"] = true;
+		$is_beside["BK"]["LO"] = true;
+		$is_beside["BK"]["IL"] = true;
+
+		$is_beside["KB"]["CM"] = true;
+		$is_beside["KB"]["KZ"] = true;
+		$is_beside["KB"]["BU"] = true;
+		$is_beside["KB"]["FA"] = true;
+		$is_beside["KB"]["IS"] = true;
+
+		$is_beside["GO"]["MN"] = true;
+		$is_beside["GO"]["KS"] = true;
+		$is_beside["GO"]["SM"] = true;
+
+		$is_beside["GI"]["MN"] = true;
+		$is_beside["GI"]["AR"] = true;
+		$is_beside["GI"]["ZA"] = true;
+		$is_beside["GI"]["QZ"] = true;
+
+		$is_beside["LO"]["IL"] = true;
+		$is_beside["LO"]["BK"] = true;
+		$is_beside["LO"]["HD"] = true;
+		$is_beside["LO"]["MK"] = true;
+		$is_beside["LO"]["IS"] = true;
+		$is_beside["LO"]["CM"] = true;
+		$is_beside["LO"]["KZ"] = true;
+
+		$is_beside["MN"]["GO"] = true;
+		$is_beside["MN"]["SM"] = true;
+		$is_beside["MN"]["TE"] = true;
+		$is_beside["MN"]["AL"] = true;
+		$is_beside["MN"]["IS"] = true;
+		$is_beside["MN"]["QZ"] = true;
+		$is_beside["MN"]["GI"] = true;
+
+		$is_beside["MK"]["IS"] = true;
+		$is_beside["MK"]["QM"] = true;
+		$is_beside["MK"]["TE"] = true;
+		$is_beside["MK"]["AL"] = true;
+		$is_beside["MK"]["LO"] = true;
+		$is_beside["MK"]["QZ"] = true;
+		$is_beside["MK"]["HD"] = true;
+
+		$is_beside["HG"]["BU"] = true;
+		$is_beside["HG"]["FA"] = true;
+		$is_beside["HG"]["KE"] = true;
+		$is_beside["HG"]["SB"] = true;
+
+		$is_beside["HD"]["BK"] = true;
+		$is_beside["HD"]["LO"] = true;
+		$is_beside["HD"]["KD"] = true;
+		$is_beside["HD"]["MK"] = true;
+		$is_beside["HD"]["QZ"] = true;
+		$is_beside["HD"]["ZA"] = true;
+
+		$is_beside["YA"]["FA"] = true;
+		$is_beside["YA"]["KE"] = true;
+		$is_beside["YA"]["KJ"] = true;
+
+		$source      = get_term( $source, 'state_city' );
+		$destination = get_term( $destination, 'state_city' );
+
+		if ( is_wp_error( $source ) || is_wp_error( $destination ) ) {
+			return false;
+		}
+
+		$source      = $source->slug;
+		$destination = $destination->slug;
+
+		return isset( $is_beside[ strtoupper( $source ) ][ strtoupper( $destination ) ] ) && $is_beside[ strtoupper( $source ) ][ strtoupper( $destination ) ] === true ? 'beside' : 'out';
 	}
 
 	public function convert_currency( $price ) {
@@ -768,7 +882,7 @@ class Persian_Woocommerce_Shipping {
 	}
 
 	public function donate() {
-		return '<p class="widefat">[<a href="http://sabira.ir/plugins/persian-woocommerce-shipping/" target="_blank">افزونه پست پیشتاز و سفارشی</a> به صورت رایگان توسط <a href="http://woocommerce.ir/" target="_blank">ووکامرس فارسی</a> منتشر شده است. برای حمایت مالی از این پروژه <a href="http://donate.woocommerce.ir/persian-woocommerce-shipping" target="_blank">اینجا کلیک کنید</a>]<p>';
+		return '<p class="widefat">[<a href="http://mahdiy.ir/plugins/persian-woocommerce-shipping/" target="_blank">افزونه پست پیشتاز و سفارشی</a> به صورت رایگان توسط <a href="http://woocommerce.ir/" target="_blank">ووکامرس فارسی</a> منتشر شده است. برای حمایت مالی از این پروژه <a href="http://donate.woocommerce.ir/persian-woocommerce-shipping" target="_blank">اینجا کلیک کنید</a>]<p>';
 	}
 
 	function get_term_options( $term_id ) {
@@ -808,6 +922,20 @@ class Persian_Woocommerce_Shipping {
 		}
 
 		return $options;
+	}
+
+	public function log( ...$params ) {
+		$log = '';
+
+		foreach ( $params as $message ) {
+			if ( is_array( $message ) || is_object( $message ) ) {
+				$log .= date( '[r] ' ) . print_r( $message, true ) . "\n";
+			} else {
+				$log .= date( '[r] ' ) . $message . "\n";
+			}
+		}
+
+		file_put_contents( WP_CONTENT_DIR . '/pws.log', $log, FILE_APPEND );
 	}
 
 }
