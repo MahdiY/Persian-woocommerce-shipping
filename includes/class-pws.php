@@ -58,7 +58,6 @@ class PWS_Core {
 		// Actions
 		add_action( 'init', [ $this, 'state_city_taxonomy' ], 0 );
 		add_action( 'admin_menu', [ $this, 'state_city_admin_menu' ] );
-		add_action( 'woocommerce_after_order_notes', [ $this, 'load_child_term' ] );
 		add_action( 'wp_ajax_mahdiy_load_cities', [ PWS_Ajax::class, 'load_cities_callback' ] );
 		add_action( 'wp_ajax_nopriv_mahdiy_load_cities', [ PWS_Ajax::class, 'load_cities_callback' ] );
 		add_action( 'wp_ajax_mahdiy_load_districts', [ PWS_Ajax::class, 'load_districts_callback' ] );
@@ -174,81 +173,6 @@ class PWS_Core {
 		add_submenu_page( 'woocommerce', $title, $title, 'manage_woocommerce', 'edit-tags.php?taxonomy=state_city&post_type=shop_order' );
 	}
 
-	public function load_child_term() {
-
-		$types = $this->types();
-
-		?>
-        <script type="text/javascript">
-			let mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-			
-			jQuery(document).ready(function ( $ ) {
-
-				<?php foreach( $types as $type ) { ?>
-				
-				function <?php echo $type; ?>_mahdiy_state_changed() {
-					
-					let data = {
-						'action': 'mahdiy_load_cities',
-						'state_id': $('#<?php echo $type; ?>_state').val(),
-						'type': '<?php echo $type; ?>'
-					};
-					
-					$.post(mahdiy_ajax_url, data, function ( response ) {
-						$('select#<?php echo $type; ?>_city').html(response);
-					});
-					
-					$('select#<?php echo $type; ?>_city').select2();
-					$('p#<?php echo $type; ?>_district_field').slideUp();
-					$('select#<?php echo $type; ?>_district').html('');
-				}
-				
-				$('select#<?php echo $type; ?>_state').on('select2:select', () => {
-					<?php echo $type; ?>_mahdiy_state_changed();
-				});
-				
-				function <?php echo $type; ?>_mahdiy_city_changed() {
-					
-					let data = {
-						'action': 'mahdiy_load_districts',
-						'city_id': $('#<?php echo $type; ?>_city').val(),
-						'type': '<?php echo $type; ?>'
-					};
-					
-					$.post(mahdiy_ajax_url, data, function ( response ) {
-						if( response === "" ) {
-							$('p#<?php echo $type; ?>_district_field').slideUp();
-						} else {
-							$('p#<?php echo $type; ?>_district_field').slideDown();
-						}
-						
-						$('select#<?php echo $type; ?>_district').html(response);
-						$('body').trigger('update_checkout');
-					});
-					
-					$('select#<?php echo $type; ?>_district').select2();
-				}
-				
-				$('select#<?php echo $type; ?>_city').on('select2:select', () => {
-					<?php echo $type; ?>_mahdiy_city_changed();
-				});
-				
-				$('select#<?php echo $type; ?>_state').select2();
-				$('select#<?php echo $type; ?>_city').select2();
-				$('select#<?php echo $type; ?>_district').select2();
-
-				<?php } ?>
-				
-			});
-        </script>
-        <style>
-            .woocommerce form .form-row .select2-container {
-                width: 100% !important;
-            }
-        </style>
-		<?php
-	}
-
 	public function load_shipping_init() {
 		require_once PWS_DIR . '/methods/pws-method.php';
 		require_once PWS_DIR . '/methods/courier-method.php';
@@ -337,12 +261,21 @@ class PWS_Core {
 	}
 
 	public function enqueue_select2_scripts() {
-		if ( is_checkout() ) {
-			wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', [ 'jquery' ], '4.0.3' );
-			wp_enqueue_script( 'selectWoo' );
-			wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
-			wp_enqueue_style( 'select2' );
+		if ( ! is_checkout() ) {
+			return false;
 		}
+
+		wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', [ 'jquery' ], '4.0.3' );
+		wp_enqueue_script( 'selectWoo' );
+		wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
+		wp_enqueue_style( 'select2' );
+
+		wp_register_script( 'pwsCheckout', PWS_URL . 'assets/js/pws.js', [ 'selectWoo' ], '1.0.0' );
+		wp_localize_script( 'pwsCheckout', 'pws_settings', [
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'types'    => $this->types()
+		] );
+		wp_enqueue_script( 'pwsCheckout' );
 	}
 
 	// Filters

@@ -37,6 +37,10 @@ if ( ! defined( 'PWS_FILE' ) ) {
 	define( 'PWS_FILE', __FILE__ );
 }
 
+if ( ! defined( 'PWS_URL' ) ) {
+	define( 'PWS_URL', plugin_dir_url( __FILE__ ) );
+}
+
 function PWS() {
 
 	if ( PWS_Tapin::is_enable() ) {

@@ -59,49 +59,22 @@ class PWS_Tapin extends PWS_Core {
 		// Hide menu
 	}
 
-	public function load_child_term() {
+	public function enqueue_select2_scripts() {
+		if ( ! is_checkout() ) {
+			return false;
+		}
 
-		$types = $this->types();
+		wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', [ 'jquery' ], '4.0.3' );
+		wp_enqueue_script( 'selectWoo' );
+		wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
+		wp_enqueue_style( 'select2' );
 
-		?>
-        <script type="text/javascript">
-			let mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-
-			jQuery(document).ready(function ( $ ) {
-
-				<?php foreach( $types as $type ) { ?>
-
-				function <?php echo $type; ?>_mahdiy_state_changed() {
-
-					let data = {
-						'action': 'mahdiy_load_cities',
-						'state_id': $('#<?php echo $type; ?>_state').val(),
-						'type': '<?php echo $type; ?>'
-					};
-
-					$.post(mahdiy_ajax_url, data, function ( response ) {
-						$('select#<?php echo $type; ?>_city').html(response);
-					});
-
-					$('select#<?php echo $type; ?>_city').select2();
-				}
-
-				$('select#<?php echo $type; ?>_state').on('select2:select', () => {
-					<?php echo $type; ?>_mahdiy_state_changed();
-				});
-
-				$('select#<?php echo $type; ?>_state').select2();
-				$('select#<?php echo $type; ?>_city').select2();
-
-				<?php } ?>
-			});
-        </script>
-        <style>
-            .woocommerce form .form-row .select2-container {
-                width: 100% !important;
-            }
-        </style>
-		<?php
+		wp_register_script( 'pwsCheckout', PWS_URL . 'assets/js/pws-tapin.js', [ 'selectWoo' ], '1.0.0' );
+		wp_localize_script( 'pwsCheckout', 'pws_settings', [
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'types'    => $this->types()
+		] );
+		wp_enqueue_script( 'pwsCheckout' );
 	}
 
 	public function checkout_update_order_meta( $order_id ) {
