@@ -41,30 +41,30 @@ class PWS_Status {
 		add_filter( 'wc_order_statuses', [ $this, 'add_order_statuses' ], 10, 1 );
 		add_filter( 'bulk_actions-edit-shop_order', [ $this, 'bulk_actions' ], 20, 1 );
 		add_action( 'admin_head', [ $this, 'status_colors' ] );
-		add_action( 'admin_footer', [ $this, 'change_status' ] );
-		add_action( 'wp_ajax_pws_change_order_status', [ $this, 'change_status_callback' ] );
-		add_action( 'wp_ajax_nopriv_pws_change_order_status', [ $this, 'change_status_callback' ] );
-		add_action( 'wp', [ $this, 'check_status_scheduled' ] );
-		add_action( 'pws_check_status', [ $this, 'check_status_callback' ] );
+
+		if ( PWS_Tapin::is_enable() ) {
+			add_action( 'admin_footer', [ $this, 'change_status' ] );
+			add_action( 'manage_posts_extra_tablenav', [ $this, 'top_order_list' ], 20, 1 );
+			add_action( 'wp_ajax_pws_change_order_status', [ $this, 'change_status_callback' ] );
+			add_action( 'wp_ajax_nopriv_pws_change_order_status', [ $this, 'change_status_callback' ] );
+			add_action( 'wp', [ $this, 'check_status_scheduled' ] );
+			add_action( 'pws_check_status', [ $this, 'check_status_callback' ] );
+		}
 	}
 
-	public function get_statues( $list = false ) {
+	public function get_statues() {
 
 		$statuses = [];
 
 		if ( PWS()->get_options( 'pws_status_enable' ) == 'yes' ) {
 
 			$statuses['wc-pws-in-stock'] = 'ارسال شده به انبار';
-
-			if ( ! PWS_Tapin::is_enable() ) {
-				$statuses['wc-pws-packaged'] = 'بسته بندی شده';
-			}
-
-			$statuses['wc-pws-courier'] = 'تحویل پیک';
+			$statuses['wc-pws-packaged'] = 'بسته بندی شده';
+			$statuses['wc-pws-courier']  = 'تحویل پیک';
 
 		}
 
-		if ( PWS_Tapin::is_enable() && ! $list ) {
+		if ( PWS_Tapin::is_enable() ) {
 			$statuses['wc-pws-packaged']      = 'بسته بندی شده';
 			$statuses['wc-pws-ready-to-ship'] = 'آماده به ارسال';
 			$statuses['wc-pws-returned']      = 'برگشتی';
@@ -94,24 +94,12 @@ class PWS_Status {
 	public function add_order_statuses( $order_statuses ) {
 		$new_order_statuses = [];
 
-		$list = false;
-
-		$screen = '';
-
-		if ( function_exists( 'get_current_screen' ) ) {
-			$screen = get_current_screen()->id ?? null;
-		}
-
-		if ( $screen == 'shop_order' ) {
-			$list = true;
-		}
-
 		foreach ( $order_statuses as $key => $status ) {
 			$new_order_statuses[ $key ] = $status;
 
 			if ( 'wc-processing' === $key ) {
 
-				foreach ( $this->get_statues( $list ) as $status => $label ) {
+				foreach ( $this->get_statues() as $status => $label ) {
 					$new_order_statuses[ $status ] = $label;
 				}
 
@@ -123,12 +111,7 @@ class PWS_Status {
 
 	public function bulk_actions( $actions ) {
 
-		if ( PWS_Tapin::is_enable() ) {
-			$actions['pws-packaged']      = 'تغییر وضعیت به بسته بندی شده';
-			$actions['pws-ready-to-ship'] = 'تغییر وضعیت به آماده به ارسال';
-		}
-
-		foreach ( $this->get_statues( true ) as $status => $label ) {
+		foreach ( $this->get_statues() as $status => $label ) {
 			$key                       = str_replace( 'wc-', '', $status );
 			$actions[ 'mark_' . $key ] = 'تغییر وضعیت به ' . $label;
 		}
@@ -193,25 +176,15 @@ class PWS_Status {
 			jQuery(document).ready(function ( $ ) {
 
 				let pws_IDs = [];
-				let pws_button_top = $(".bulkactions #doaction");
-				let pws_button_bottom = $(".bulkactions #doaction2");
+				let pws_button_submit = $("#pws-tapin-submit");
+				let pws_button_ship = $("#pws-tapin-ship");
 
-				pws_button_top.click(function () {
-					let status = $("#bulk-action-selector-top").val();
-
-					if( status.indexOf('pws-') == 0 ) {
-						pws_change_status(status);
-						return false;
-					}
+				pws_button_submit.click(function () {
+					pws_change_status('pws-packaged');
 				});
 
-				pws_button_bottom.click(function () {
-					let status = $("#bulk-action-selector-bottom").val();
-
-					if( status.indexOf('pws-') == 0 ) {
-						pws_change_status(status);
-						return false;
-					}
+				pws_button_ship.click(function () {
+					pws_change_status('pws-ready-to-ship');
 				});
 
 				function pws_change_status( status ) {
@@ -228,8 +201,8 @@ class PWS_Status {
 					}
 
 					// Start
-					pws_button_top.attr('disabled', 'disabled');
-					pws_button_bottom.attr('disabled', 'disabled');
+					pws_button_submit.attr('disabled', 'disabled');
+					pws_button_ship.attr('disabled', 'disabled');
 					$('.pws-tips').remove();
 
 					pws_change_status_ajax(status);
@@ -241,8 +214,8 @@ class PWS_Status {
 
 					if( id == undefined ) {
 						// End
-						pws_button_top.removeAttr('disabled');
-						pws_button_bottom.removeAttr('disabled');
+						pws_button_submit.removeAttr('disabled');
+						pws_button_ship.removeAttr('disabled');
 						return true;
 					}
 
@@ -298,6 +271,23 @@ class PWS_Status {
 
 	private function change_status_order() {
 		// @todo
+	}
+
+	public function top_order_list( $which ) {
+		global $typenow;
+
+		if ( 'shop_order' === $typenow && 'top' === $which ) {
+			?>
+            <div class="alignleft actions custom">
+                <button type="button" id="pws-tapin-submit" class="button-primary"
+                        title="جهت ثبت سفارشات انتخاب شده در پنل تاپین و دریافت بارکد پستی، کلیک کنید.">ثبت در تاپین
+                </button>
+                <button type="button" id="pws-tapin-ship" class="button-primary"
+                        title="پس از ثبت سفارش در پنل، جهت اعلام به پست برای جمع آوری بسته اینجا کلیک کنید.">آماده ارسال
+                </button>
+            </div>
+			<?php
+		}
 	}
 
 	public function change_status_callback() {

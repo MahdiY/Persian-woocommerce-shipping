@@ -24,6 +24,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 * محاسبه اتوماتیک هزینه پست پیشتاز و سفارشی بر اساس وزن (تعرفه سال 1398)
 * سازگار با چهار واحد پولی ایران در ووکامرس
 * سازگار با تمامی افزونه های فاکتور و برچسب ساز
+* سازگار با افزونه چند فروشندگی دکان
 * و ...
 
 = سازگاری =
@@ -62,6 +63,28 @@ Ask your questions in [Persian Woocommerce Shipping](http://mahdiy.ir/plugins/pe
 5. Custom settings for every state, city or district.
 
 == Changelog ==
+= 2.1.3 =
+* Fix: Save Country / State field in configuration
+* Fix: Distirct error in cart page
+* Fix: Check load Select2 in checkout page
+* Fix: Tipax destination
+* Fix: Fix some bugs
+= 2.1.2 =
+* Fix: State & city field style
+= 2.1.1 =
+* Fix: Compatibility with php 7.0
+= 2.1.0 =
+* Tweak: Compatibility with Dokan 3.0.*
+* Tweak: Save user selected district id
+* Tweak: Add taping panel helper message
+* Tweak: Add helper button for tapin in order list
+* Improve: Remove initial ajax requests in checkout page
+* Improve: Reduce ajax requests in checkout page
+* Improve: Update city checkout field structure
+* Fix: Remove old hooks
+* Fix: State & City filed id standard
+* Fix: Show district name in panel
+* Fix: Order status in tapin mode
 = 2.0.5 =
 * Fix: Apply free shipping in methods
 * Improve: Add rate function

@@ -24,7 +24,7 @@ class PWS_state_city_taxonomy {
 			return $actions;
 		}
 
-		$edit_list_link = add_query_arg( 'term_id', $term->term_id, admin_url( 'admin.php?page=sabira_edit_state' ) );
+		$edit_list_link = add_query_arg( 'term_id', $term->term_id, admin_url( 'admin.php?page=pabit_edit_state' ) );
 
 		$actions['edit_list'] = "<a href='{$edit_list_link}'>ویرایش شهر ها</a>";
 
@@ -33,9 +33,9 @@ class PWS_state_city_taxonomy {
 
 	public function admin_menu() {
 
-		add_submenu_page( '', '', '', 'manage_woocommerce', 'sabira_edit_state', array(
+		add_submenu_page( '', '', '', 'manage_woocommerce', 'pabit_edit_state', array(
 			$this,
-			'sabira_edit_state_callback'
+			'pabit_edit_state_callback'
 		) );
 
 	}
@@ -130,8 +130,9 @@ class PWS_state_city_taxonomy {
             </td>
         </tr>
         <tr class="form-field">
-            <th scope="row" valign="top"><label
-                        for="term_meta[custom_cost]"><?php _e( 'هزینه ثابت پست سفارشی' ); ?></label></th>
+            <th scope="row" valign="top">
+                <label for="term_meta[custom_cost]"><?php _e( 'هزینه ثابت پست سفارشی' ); ?></label>
+            </th>
             <td>
                 <input type="number" name="term_meta[custom_cost]" id="term_meta[custom_cost]"
                        value="<?php echo $term_meta['custom_cost']; ?>"
@@ -155,7 +156,7 @@ class PWS_state_city_taxonomy {
 		<?php
 	}
 
-	public function sabira_edit_state_callback() {
+	public function pabit_edit_state_callback() {
 
 		$state_term = get_term( $_GET['term_id'], 'state_city' );
 
@@ -166,7 +167,7 @@ class PWS_state_city_taxonomy {
 		}
 
 		if ( $state_term->parent ) {
-			wp_redirect( add_query_arg( 'term_id', $state_term->parent, admin_url( 'admin.php?page=sabira_edit_state' ) ) );
+			wp_redirect( add_query_arg( 'term_id', $state_term->parent, admin_url( 'admin.php?page=pabit_edit_state' ) ) );
 
 			return false;
 		}

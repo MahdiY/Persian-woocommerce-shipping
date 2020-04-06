@@ -65,34 +65,33 @@ class PWS_Tapin extends PWS_Core {
 
 		?>
         <script type="text/javascript">
-			var mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
+			let mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
 
 			jQuery(document).ready(function ( $ ) {
 
 				<?php foreach( $types as $type ) { ?>
 
 				function <?php echo $type; ?>_mahdiy_state_changed() {
-					var data = {
+
+					let data = {
 						'action': 'mahdiy_load_cities',
 						'state_id': $('#<?php echo $type; ?>_state').val(),
-						'name': '<?php echo $type; ?>'
+						'type': '<?php echo $type; ?>'
 					};
 
 					$.post(mahdiy_ajax_url, data, function ( response ) {
-						$('select#<?php echo $type; ?>_mahdiy_cities').html(response);
-						$('body').trigger('pws_city_loaded');
+						$('select#<?php echo $type; ?>_city').html(response);
 					});
 
-					$('select#<?php echo $type; ?>_mahdiy_cities').select2();
-					$('p#<?php echo $type; ?>_mahdiy_district_field').slideUp();
-					$('select#<?php echo $type; ?>_mahdiy_district').html("");
+					$('select#<?php echo $type; ?>_city').select2();
 				}
 
-				$('body').on('change', 'select#<?php echo $type; ?>_state, input#<?php echo $type; ?>_state', function () {
+				$('select#<?php echo $type; ?>_state').on('select2:select', () => {
 					<?php echo $type; ?>_mahdiy_state_changed();
 				});
 
-				<?php echo $type; ?>_mahdiy_state_changed();
+				$('select#<?php echo $type; ?>_state').select2();
+				$('select#<?php echo $type; ?>_city').select2();
 
 				<?php } ?>
 			});
@@ -103,38 +102,6 @@ class PWS_Tapin extends PWS_Core {
             }
         </style>
 		<?php
-	}
-
-	public function edit_checkout_cities_field( $fields ) {
-
-		$types = $this->types();
-
-		foreach ( $types as $type ) {
-
-			if ( ! isset( $fields[ $type ][ $type . '_city' ] ) ) {
-				continue;
-			}
-
-			$fields[ $type ][ $type . '_state' ]['placeholder'] = __( 'استان خود را انتخاب نمایید' );
-
-			$class = is_array( $fields[ $type ][ $type . '_city' ]['class'] ) ? $fields[ $type ][ $type . '_city' ]['class'] : array();
-
-			$fields[ $type ][ $type . '_postcode' ]['clear'] = false;
-
-			$fields[ $type ][ $type . '_city' ] = array(
-				'type'        => $type . '_mahdiy_cities',
-				'label'       => 'شهر',
-				'placeholder' => __( 'لطفا ابتدا استان خود را انتخاب نمایید' ),
-				'required'    => true,
-				'id'          => $type . '_mahdiy_cities',
-				'class'       => apply_filters( 'pws_city_class', $class ),
-				'default'     => 0,
-				'priority'    => apply_filters( 'pws_city_priority', $fields[ $type ][ $type . '_city' ]['priority'] ),
-			);
-
-		}
-
-		return $fields;
 	}
 
 	public function checkout_update_order_meta( $order_id ) {

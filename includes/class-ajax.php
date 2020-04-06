@@ -21,19 +21,13 @@ class PWS_Ajax {
 
 		$cities = PWS()::cities( $state_id );
 
-		$name = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'billing' : 'shipping';
+		$type = isset( $_POST['type'] ) && $_POST['type'] == 'billing' ? 'billing' : 'shipping';
 
-		if ( is_user_logged_in() ) {
-			$term_id = get_user_meta( get_current_user_id(), $name . '_city', true );
-		} else {
-			$term_id = WC()->customer->{"get_{$name}_city"}();
-		}
+		$term_id = WC()->checkout()->get_value( $type . '_city' );
 
 		if ( intval( $term_id ) == 0 ) {
-			$term_id = apply_filters( 'pws_default_city', 0, $name, $state_id );
+			$term_id = apply_filters( 'pws_default_city', 0, $type, $state_id );
 		}
-
-		WC()->customer->{"set_{$name}_state"}( $state_id );
 
 		printf( "<option value='0'>لطفا شهر خود را انتخاب نمایید </option>" );
 
@@ -66,19 +60,13 @@ class PWS_Ajax {
 			die();
 		}
 
-		$name = isset( $_POST['name'] ) && $_POST['name'] == 'billing' ? 'billing' : 'shipping';
+		$type = isset( $_POST['type'] ) && $_POST['type'] == 'billing' ? 'billing' : 'shipping';
 
-		$term_id = 0;
-
-		if ( is_user_logged_in() ) {
-			$term_id = get_user_meta( get_current_user_id(), $name . '_district', true );
-		}
+		$term_id = WC()->session->get( $type . '_district', 0 );
 
 		if ( intval( $term_id ) == 0 ) {
-			$term_id = apply_filters( 'pws_default_district', 0, $name, $city_id );
+			$term_id = apply_filters( 'pws_default_district', $city_id, $type, $city_id );
 		}
-
-		WC()->customer->{"set_{$name}_city"}( $city_id );
 
 		if ( count( $cities ) ) {
 			$city = get_term( $city_id, 'state_city' );

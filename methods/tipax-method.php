@@ -36,8 +36,9 @@ class WC_Tipax_Method extends PWS_Shipping_Method {
 
 		parent::init();
 
-		$this->base_cost = intval( $this->get_option( 'base_cost' ) );
-		$this->per_cost  = intval( $this->get_option( 'per_cost' ) );
+		$this->base_cost   = intval( $this->get_option( 'base_cost' ) );
+		$this->per_cost    = intval( $this->get_option( 'per_cost' ) );
+		$this->destination = $this->get_option( 'destination', [] );
 
 		add_action( 'woocommerce_update_options_shipping_' . $this->id, array( $this, 'process_admin_options' ) );
 	}
@@ -100,23 +101,22 @@ class WC_Tipax_Method extends PWS_Shipping_Method {
 			return parent::is_available( $package );
 		}
 
-		$term_id      = $package['destination']['district'] !== 0 ? $package['destination']['district'] : $package['destination']['city'];
-		$terms        = PWS()->get_terms_option( $term_id );
-		$is_available = true;
+		$term_id = $package['destination']['district'] ?? $package['destination']['city'];
+		$terms   = PWS()->get_terms_option( $term_id );
 
 		if ( $terms === false || is_wp_error( $terms ) ) {
-			$is_available = false;
+			return false;
 		} else {
 
 			foreach ( (array) $terms as $term ) {
 				if ( $term['tipax_on'] == 0 ) {
-					$is_available = false;
+					return false;
 				}
 			}
 
 		}
 
-		return apply_filters( 'woocommerce_is_available_shipping_' . $this->id, $is_available, $package );
+		return parent::is_available( $package );
 	}
 
 	public function calculate_shipping( $package = array() ) {
@@ -126,7 +126,7 @@ class WC_Tipax_Method extends PWS_Shipping_Method {
 		}
 
 		$cost    = $this->base_cost;
-		$term_id = $package['destination']['district'] !== 0 ? $package['destination']['district'] : $package['destination']['city'];
+		$term_id = $package['destination']['district'] ?? $package['destination']['city'];
 		$terms   = PWS()->get_terms_option( $term_id );
 
 		foreach ( $terms as $term ) {

@@ -101,7 +101,7 @@ class WC_Courier_Method extends PWS_Shipping_Method {
 			return parent::is_available( $package );
 		}
 
-		$term_id = $package['destination']['district'] !== 0 ? $package['destination']['district'] : $package['destination']['city'];
+		$term_id = $package['destination']['district'] ?? $package['destination']['city'];
 		$terms   = PWS()->get_terms_option( $term_id );
 
 		if ( $terms === false || is_wp_error( $terms ) ) {
@@ -126,7 +126,7 @@ class WC_Courier_Method extends PWS_Shipping_Method {
 		}
 
 		$cost    = $this->base_cost;
-		$term_id = $package['destination']['district'] !== 0 ? $package['destination']['district'] : $package['destination']['city'];
+		$term_id = $package['destination']['district'] ?? $package['destination']['city'];
 		$terms   = PWS()->get_terms_option( $term_id );
 
 		foreach ( $terms as $term ) {

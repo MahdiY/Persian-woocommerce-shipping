@@ -76,7 +76,7 @@ class WC_Forehand_Method extends PWS_Shipping_Method {
 		}
 
 		$cost    = "";
-		$term_id = $package['destination']['district'] !== 0 ? $package['destination']['district'] : $package['destination']['city'];
+		$term_id = $package['destination']['district'] ?? $package['destination']['city'];
 		$terms   = PWS()->get_terms_option( $term_id );
 
 		foreach ( (array) $terms as $term ) {
