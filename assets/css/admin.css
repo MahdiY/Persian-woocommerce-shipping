@@ -1,0 +1,15 @@
+/*
+ * Admin.css will load in admin area
+ * @package : Persian Woocommerce Shipping
+*/
+.toplevel_page_pws-tools #pws-map-admin-edit{
+    display: none !important;
+}
+
+.toplevel_page_pws-tools  h1, .toplevel_page_pws-tools h2, .toplevel_page_pws-tools h3,
+.toplevel_page_pws-tools h4, .toplevel_page_pws-tools h5, .toplevel_page_pws-tools h6{
+font-family: unset;
+}
+.pws-order__map__shipping__information{
+    margin-top: 5px;
+}

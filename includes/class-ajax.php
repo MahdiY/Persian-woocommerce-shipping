@@ -5,6 +5,8 @@
  * E-Mail    : M@hdiY.IR
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class PWS_Ajax {
 
 	public static function load_cities_callback() {
@@ -40,6 +42,10 @@ class PWS_Ajax {
 
 	public static function load_districts_callback() {
 
+		if ( PWS_Tapin::is_enable() ) {
+			die( apply_filters( 'pws_tapin_load_districts', '' ) );
+		}
+
 		if ( ! isset( $_POST['city_id'] ) ) {
 			die();
 		}
@@ -53,12 +59,14 @@ class PWS_Ajax {
 		$cities = get_terms( [
 			'taxonomy'   => 'state_city',
 			'hide_empty' => false,
-			'child_of'   => $city_id
+			'child_of'   => $city_id,
 		] );
 
 		if ( is_wp_error( $cities ) ) {
 			die();
 		}
+
+		$cities = apply_filters( 'pws_districts', $cities, $city_id );
 
 		$type = isset( $_POST['type'] ) && $_POST['type'] == 'billing' ? 'billing' : 'shipping';
 
@@ -69,12 +77,12 @@ class PWS_Ajax {
 		}
 
 		if ( count( $cities ) ) {
-			$city = get_term( $city_id, 'state_city' );
-			printf( "<option value='%d' %s>%s</option>", $city->term_id, selected( $term_id, $city->term_id, false ), $city->name );
+			printf( "<option value='0'>لطفا محله خود را انتخاب نمایید</option>" );
 		}
 
 		foreach ( $cities as $city ) {
-			printf( "<option value='%d' %s>%s</option>", $city->term_id, selected( $term_id, $city->term_id, false ), str_repeat( "- ", count( get_ancestors( $city->term_id, 'state_city' ) ) - 2 ) . $city->name );
+			$indent = str_repeat( "- ", count( get_ancestors( $city->term_id, 'state_city' ) ) - 2 );
+			printf( "<option value='%d' %s>%s</option>", $city->term_id, selected( $term_id, $city->term_id, false ), $indent . $city->name );
 		}
 
 		die();
