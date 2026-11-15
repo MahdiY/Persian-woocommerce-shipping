@@ -3,22 +3,25 @@
  * Developer : MahdiY
  * Web Site  : MahdiY.IR
  * E-Mail    : M@hdiY.IR
+ * أَلسَّلٰامُ عَلَیکَ یٰا عَلی اِبنِ موسَی أَلرّضٰآ
  */
+
+defined( 'ABSPATH' ) || exit;
 
 class PWS_Tapin extends PWS_Core {
 
-	protected static $gateway = 'tapin';
+	protected static string $gateway = 'tapin';
 
-	protected static $gateways = [
+	protected static array $gateways = [
 		'tapin'      => 'tapin.ir',
-		'posteketab' => 'posteketab.com'
+		'posteketab' => 'postketab.com',
 	];
 
 	/**
 	 * Ensures only one instance of PWS_Tapin is loaded or can be loaded.
 	 *
-	 * @see PWS()
 	 * @return PWS_Tapin
+	 * @see PWS()
 	 */
 	public static function instance() {
 
@@ -34,77 +37,64 @@ class PWS_Tapin extends PWS_Core {
 		self::$methods = [
 			'WC_Courier_Method',
 			'WC_Tipax_Method',
-			'WC_Tapin_Method',
+			'Tapin_Pishtaz_Method',
+			'Tapin_Special_Method',
 		];
 
-		add_filter( 'wooi_ticket_header_path', function() {
-			return PWS_DIR . '/assets/template/header.php';
-		}, 100 );
-		add_filter( 'wooi_ticket_body_path', function() {
-			return PWS_DIR . '/assets/template/body.php';
-		}, 100 );
-		add_filter( 'wooi_ticket_footer_path', function() {
-			return PWS_DIR . '/assets/template/footer.php';
-		}, 100 );
-		add_filter( 'wooi_ticket_per_page', function() {
-			return 10000;
-		}, 100 );
+		add_filter( 'get_ancestors', function ( $ancestors, $object_id, $object_type, $resource_type ) {
 
-		add_action( 'admin_footer', [ $this, 'admin_footer' ] );
+			if ( $object_type == 'state_city' ) {
+
+				$ancestors = wp_cache_get( 'city_ancestors', 'pws' );
+
+				if ( ! empty( $ancestors ) ) {
+					return $ancestors;
+				}
+
+				$ancestors = [];
+
+				$zone = wp_list_pluck( PWS()::zone(), 'cities', null );
+
+				foreach ( $zone as $state_id => $cities ) {
+					if ( isset( $cities[ $object_id ] ) ) {
+						$ancestors = [ 'state_' . $state_id ];
+						break;
+					}
+				}
+
+				wp_cache_set( 'city_ancestors', $ancestors, 'pws' );
+
+				return $ancestors;
+			}
+
+			return $ancestors;
+		}, 10, 4 );
 
 		parent::init_hooks();
 	}
 
-	public function state_city_admin_menu() {
-		// Hide menu
-	}
+	public function enqueue_select2_scripts() {
+		if ( ! is_checkout() ) {
+			return false;
+		}
 
-	public function load_child_term() {
+		wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', [ 'jquery' ], '4.0.3' );
+		wp_enqueue_script( 'selectWoo' );
+		wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
+		wp_enqueue_style( 'select2' );
 
-		$types = $this->types();
-
-		?>
-        <script type="text/javascript">
-			let mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-
-			jQuery(document).ready(function ( $ ) {
-
-				<?php foreach( $types as $type ) { ?>
-
-				function <?php echo $type; ?>_mahdiy_state_changed() {
-
-					let data = {
-						'action': 'mahdiy_load_cities',
-						'state_id': $('#<?php echo $type; ?>_state').val(),
-						'type': '<?php echo $type; ?>'
-					};
-
-					$.post(mahdiy_ajax_url, data, function ( response ) {
-						$('select#<?php echo $type; ?>_city').html(response);
-					});
-
-					$('select#<?php echo $type; ?>_city').select2();
-				}
-
-				$('select#<?php echo $type; ?>_state').on('select2:select', () => {
-					<?php echo $type; ?>_mahdiy_state_changed();
-				});
-
-				$('select#<?php echo $type; ?>_state').select2();
-				$('select#<?php echo $type; ?>_city').select2();
-
-				<?php } ?>
-			});
-        </script>
-        <style>
-            .woocommerce form .form-row .select2-container {
-                width: 100% !important;
-            }
-        </style>
-		<?php
+		wp_register_script( 'pwsCheckout', PWS_URL . 'assets/js/pws-tapin.js', [ 'selectWoo' ], '1.0.0' );
+		wp_localize_script( 'pwsCheckout', 'pws_settings', [
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'types'    => $this->types(),
+			'is_cod'   => WC()->session->get( 'chosen_payment_method' ) == 'cod',
+		] );
+		wp_enqueue_script( 'pwsCheckout' );
 	}
 
 	public function checkout_update_order_meta( $order_id ) {
+
+		$order = wc_get_order( $order_id );
 
 		$types  = $this->types();
 		$fields = [ 'state', 'city' ];
@@ -113,12 +103,12 @@ class PWS_Tapin extends PWS_Core {
 
 			foreach ( $fields as $field ) {
 
-				$term_id = get_post_meta( $order_id, "_{$type}_{$field}", true );
+				$term_id = $order->{"get_{$type}_{$field}"}();
 				$term    = self::{'get_' . $field}( intval( $term_id ) );
 
 				if ( ! is_null( $term ) ) {
-					update_post_meta( $order_id, "_{$type}_{$field}", $term );
-					update_post_meta( $order_id, "_{$type}_{$field}_id", $term_id );
+					$order->{"set_{$type}_{$field}"}( $term );
+					$order->update_meta_data( "_{$type}_{$field}_id", $term_id );
 				}
 
 			}
@@ -128,45 +118,31 @@ class PWS_Tapin extends PWS_Core {
 
 			foreach ( $fields as $field ) {
 
-				$label = get_post_meta( $order_id, "_billing_{$field}", true );
-				$id    = get_post_meta( $order_id, "_billing_{$field}_id", true );
+				$label = $order->{"get_billing_{$field}"}();
+				$id    = $order->get_meta( "_billing_{$field}_id" );
 
-				update_post_meta( $order_id, "_shipping_{$field}", $label );
-				update_post_meta( $order_id, "_shipping_{$field}_id", $id );
+				$order->{"set_shipping_{$field}"}( $label );
+				$order->update_meta_data( "_shipping_{$field}_id", $id );
 
 			}
 
 		}
 
-		/** @var WC_Order $order */
-		$order = wc_get_order( $order_id );
-
-		foreach ( $order->get_shipping_methods() as $shipping_item ) {
-
-			if ( $shipping_item->get_method_id() == 'WC_Tapin_Method' ) {
-
-				$instance_id = $shipping_item->get_instance_id();
-
-				$data = get_option( "woocommerce_WC_Tapin_Method_{$instance_id}_settings" );
-
-				update_post_meta( $order_id, "tapin_method", $data );
-			}
-		}
-
+		$order->save();
 	}
 
 	public function checkout_process() {
 
 		$types = $this->types();
 
-		$fields = array(
+		$fields = [
 			'state' => 'استان',
 			'city'  => 'شهر',
-		);
+		];
 
 		$type_label = [
 			'billing'  => 'صورتحساب',
-			'shipping' => 'حمل و نقل'
+			'shipping' => 'حمل و نقل',
 		];
 
 		if ( ! isset( $_POST['ship_to_different_address'] ) && count( $types ) == 2 ) {
@@ -222,7 +198,16 @@ class PWS_Tapin extends PWS_Core {
 		}
 	}
 
-	function localisation_address_formats( $formats ) {
+	public function cart_shipping_packages( $packages ) {
+
+		foreach ( $packages as $key => $package ) {
+			$packages[ $key ]['destination']['is_cod'] = WC()->session->get( 'chosen_payment_method' ) == 'cod';
+		}
+
+		return $packages;
+	}
+
+	public function localisation_address_formats( $formats ) {
 
 		$formats['IR'] = "{company}\n{first_name} {last_name}\n{country}\n{state}\n{city}\n{address_1}\n{address_2}\n{postcode}";
 
@@ -241,55 +226,17 @@ class PWS_Tapin extends PWS_Core {
 		return $replace;
 	}
 
-	public function persian_woo_sms_content_replace( $content, $find, $replace, $order_id, $order, $product_ids ) {
-
-		$city                = self::get_city( $replace[6] );
-		$pws_tag['{b_city}'] = is_null( $city ) ? $replace[6] : $city;
-
-		$city                 = self::get_city( $replace[15] );
-		$pws_tag['{sh_city}'] = is_null( $city ) ? $replace[15] : $city;
-
-		return strtr( $content, $pws_tag );
+	public static function is_enable(): bool {
+		return self::get_option( 'tapin.enable', false ) == 1;
 	}
 
-	public function admin_footer() {
+	public static function request( $path, $data = [], $associative = null ) {
 
-		if ( ! isset( $_GET['page'], $_GET['tab'], $_GET['instance_id'] ) || $_GET['tab'] != 'shipping' ) {
-			return false;
-		}
-
-		?>
-        <script type="text/javascript">
-			let courier = jQuery("#woocommerce_WC_Courier_Method_destination");
-
-			if( courier.length ) {
-				courier.select2();
-			}
-
-			let tipax = jQuery("#woocommerce_WC_Tipax_Method_destination");
-
-			if( tipax.length ) {
-				tipax.select2();
-			}
-        </script>
-		<?php
-	}
-
-	public static function is_enable() {
-		$options = get_option( 'PW_Options' );
-
-		return isset( $options['pws_tapin_enable'] ) && $options['pws_tapin_enable'] == 'yes';
-	}
-
-	public static function request( $path, $data = [], $absolute_url = null ) {
-
-		$path = trim( $path, ' / ' );
-
-		$url = sprintf( 'https://api.%s/api/%s/', self::$gateways[ self::$gateway ], $path );
-
-		if ( ! is_null( $absolute_url ) ) {
-			$url = $absolute_url;
-		}
+		$url = sprintf(
+			'https://api.%s/api/%s/',
+			self::$gateways[ self::$gateway ],
+			trim( $path, ' /' )
+		);
 
 		$curl = curl_init();
 
@@ -297,8 +244,8 @@ class PWS_Tapin extends PWS_Core {
 			CURLOPT_URL            => $url,
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_ENCODING       => "",
-			CURLOPT_MAXREDIRS      => 10,
-			CURLOPT_TIMEOUT        => 0,
+			CURLOPT_MAXREDIRS      => 1,
+			CURLOPT_TIMEOUT        => 10,
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST  => "POST",
@@ -306,68 +253,50 @@ class PWS_Tapin extends PWS_Core {
 			CURLOPT_HTTPHEADER     => [
 				"Content-type: application/json",
 				"Accept: application/json",
-				"Authorization: " . PWS()->get_options( 'pws_tapin_token' )
+				"Authorization: " . PWS()->get_option( 'tapin.token' ),
 			],
 		] );
 
-		$response = curl_exec( $curl );
+		$response  = curl_exec( $curl );
+		$http_code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+		$error     = curl_error( $curl );
 
-		curl_close( $curl );
-
-		if ( $response === false ) {
-
-			$error = curl_error( $curl );
+		if ( $response === false || $error ) {
 
 			PWS()->log( __METHOD__ . ' Line: ' . __LINE__ );
+			PWS()->log( $url );
 			PWS()->log( $data );
 			PWS()->log( $error );
 
-			return new WP_Error( $error );
+			curl_close( $curl );
+
+			return new WP_Error( '', $error );
 		}
 
-		return json_decode( $response );
+		if ( $http_code >= 300 ) {
+
+			PWS()->log( __METHOD__ . ' Line: ' . __LINE__ );
+			PWS()->log( $url );
+			PWS()->log( $data );
+			PWS()->log( $http_code );
+
+			return new WP_Error( $http_code, "خطا {$http_code}" );
+		}
+
+		curl_close( $curl );
+
+		return json_decode( $response, $associative );
 	}
 
 	public static function zone() {
 
-		$zone = get_transient( 'pws_tapin_zone' );
+		$zone = wp_cache_get( 'pws_tapin_zone', 'nabik' );
 
 		if ( $zone === false ) {
 
-			$response = wp_remote_get( 'https://public.api.tapin.ir/api/v1/public/state/tree/' );
+			$zone = json_decode( file_get_contents( PWS_DIR . '/data/tapin.json' ), true );
 
-			if ( is_wp_error( $response ) ) {
-				$zone = get_option( 'pws_tapin_zone', null );
-
-				if ( is_null( $zone ) ) {
-					$zone = file_get_contents( PWS_DIR . '/data/tapin.json' );
-				}
-
-			} else {
-				$data = $response['body'];
-
-				$data = json_decode( $data, true )['entries'];
-
-				$zone = [];
-
-				foreach ( $data as $state ) {
-
-					$zone[ $state['code'] ] = [
-						'title'  => trim( $state['title'] ),
-						'cities' => []
-					];
-
-					foreach ( $state['cities'] as $city ) {
-						$title = trim( str_replace( '-' . $state['title'], '', $city['title'] ) );
-
-						$zone[ $state['code'] ]['cities'][ $city['code'] ] = $title;
-					}
-
-				}
-
-				set_transient( 'pws_tapin_zone', $zone, WEEK_IN_SECONDS );
-				update_option( 'pws_tapin_zone', $zone );
-			}
+			wp_cache_set( 'pws_tapin_zone', $zone, 'nabik' );
 		}
 
 		return $zone;
@@ -377,35 +306,33 @@ class PWS_Tapin extends PWS_Core {
 
 		$states = get_transient( 'pws_tapin_states' );
 
-		if ( $states === false ) {
+		if ( $states === false || count( (array) $states ) == 0 ) {
 
 			$zone = self::zone();
 
-			$states = [];
-
-			foreach ( $zone as $code => $state ) {
-				$states[ $code ] = trim( $state['title'] );
-			}
+			$states = array_map( function ( $state ) {
+				return trim( $state['title'] );
+			}, $zone );
 
 			uasort( $states, [ self::class, 'pws_sort_state' ] );
 
-			set_transient( 'pws_tapin_states', $states, DAY_IN_SECONDS );
+			set_transient( 'pws_tapin_states', array_filter( $states ), DAY_IN_SECONDS );
 		}
 
-		return $states;
+		return apply_filters( 'pws_states', $states );
 	}
 
 	public static function cities( $state_id = null ) {
 
 		$cities = get_transient( 'pws_tapin_cities_' . $state_id );
 
-		if ( $cities === false ) {
+		if ( $cities === false || count( (array) $cities ) == 0 ) {
 
 			$zone = self::zone();
 
 			if ( is_null( $state_id ) ) {
 
-				$state_cities = array_column( self::zone(), 'cities' );
+				$state_cities = array_column( $zone, 'cities' );
 
 				$cities = [];
 
@@ -424,7 +351,11 @@ class PWS_Tapin extends PWS_Core {
 			set_transient( 'pws_tapin_cities_' . $state_id, $cities, DAY_IN_SECONDS );
 		}
 
-		return $cities;
+		if ( isset( $cities[376] ) ) {
+			unset( $cities[376] );
+		}
+
+		return apply_filters( 'pws_cities', $cities, $state_id );
 	}
 
 	public static function get_city( $city_id ) {
@@ -434,36 +365,307 @@ class PWS_Tapin extends PWS_Core {
 		return $cities[ $city_id ] ?? null;
 	}
 
-	public static function shop() {
+	public static function districts( $city_id ): array {
+		return [];
+	}
 
-		$shop = get_transient( 'pws_tapin_shop' );
+	public static function get_district( $district_id ): ?string {
+		return null;
+	}
 
-		if ( $shop === false ) {
+	public function check_states_beside( $source, $destination ): bool {
+
+		if ( $source == $destination ) {
+			return false;
+		}
+
+		$is_beside[3][16] = true;
+		$is_beside[3][15] = true;
+		$is_beside[3][12] = true;
+
+		$is_beside[16][3]  = true;
+		$is_beside[16][18] = true;
+		$is_beside[16][12] = true;
+
+		$is_beside[15][3]  = true;
+		$is_beside[15][2]  = true;
+		$is_beside[15][12] = true;
+
+		$is_beside[6][24] = true;
+		$is_beside[6][20] = true;
+		$is_beside[6][28] = true;
+		$is_beside[6][11] = true;
+		$is_beside[6][10] = true;
+		$is_beside[6][9]  = true;
+		$is_beside[6][30] = true;
+		$is_beside[6][25] = true;
+		$is_beside[6][5]  = true;
+
+		$is_beside[31][1]  = true;
+		$is_beside[31][11] = true;
+		$is_beside[31][8]  = true;
+		$is_beside[31][13] = true;
+
+		$is_beside[27][19] = true;
+		$is_beside[27][20] = true;
+		$is_beside[27][4]  = true;
+
+		$is_beside[21][28] = true;
+		$is_beside[21][4]  = true;
+		$is_beside[21][5]  = true;
+		$is_beside[21][23] = true;
+
+		$is_beside[1][31] = true;
+		$is_beside[1][11] = true;
+		$is_beside[1][10] = true;
+		$is_beside[1][13] = true;
+		$is_beside[1][9]  = true;
+
+		$is_beside[24][28] = true;
+		$is_beside[24][4]  = true;
+		$is_beside[24][20] = true;
+		$is_beside[24][6]  = true;
+
+		$is_beside[30][26] = true;
+		$is_beside[30][22] = true;
+		$is_beside[30][25] = true;
+		$is_beside[30][6]  = true;
+		$is_beside[30][9]  = true;
+		$is_beside[30][7]  = true;
+
+		$is_beside[7][30] = true;
+		$is_beside[7][29] = true;
+		$is_beside[7][9]  = true;
+
+		$is_beside[29][7]  = true;
+		$is_beside[29][14] = true;
+		$is_beside[29][9]  = true;
+
+		$is_beside[4][27] = true;
+		$is_beside[4][21] = true;
+		$is_beside[4][20] = true;
+		$is_beside[4][28] = true;
+		$is_beside[4][24] = true;
+
+		$is_beside[12][2]  = true;
+		$is_beside[12][15] = true;
+		$is_beside[12][3]  = true;
+		$is_beside[12][16] = true;
+		$is_beside[12][18] = true;
+		$is_beside[12][17] = true;
+		$is_beside[12][8]  = true;
+
+		$is_beside[9][13] = true;
+		$is_beside[9][1]  = true;
+		$is_beside[9][10] = true;
+		$is_beside[9][6]  = true;
+		$is_beside[9][29] = true;
+		$is_beside[9][7]  = true;
+		$is_beside[9][30] = true;
+
+		$is_beside[26][30] = true;
+		$is_beside[26][22] = true;
+		$is_beside[26][23] = true;
+
+		$is_beside[5][6]  = true;
+		$is_beside[5][25] = true;
+		$is_beside[5][21] = true;
+		$is_beside[5][23] = true;
+		$is_beside[5][28] = true;
+		$is_beside[5][22] = true;
+
+		$is_beside[8][12] = true;
+		$is_beside[8][17] = true;
+		$is_beside[8][11] = true;
+		$is_beside[8][31] = true;
+		$is_beside[8][13] = true;
+		$is_beside[8][2]  = true;
+
+		$is_beside[10][1]  = true;
+		$is_beside[10][11] = true;
+		$is_beside[10][9]  = true;
+		$is_beside[10][6]  = true;
+
+		$is_beside[18][16] = true;
+		$is_beside[18][19] = true;
+		$is_beside[18][17] = true;
+		$is_beside[18][12] = true;
+
+		$is_beside[22][25] = true;
+		$is_beside[22][5]  = true;
+		$is_beside[22][23] = true;
+		$is_beside[22][26] = true;
+		$is_beside[22][30] = true;
+
+		$is_beside[19][18] = true;
+		$is_beside[19][17] = true;
+		$is_beside[19][20] = true;
+		$is_beside[19][27] = true;
+
+		$is_beside[28][24] = true;
+		$is_beside[28][4]  = true;
+		$is_beside[28][21] = true;
+		$is_beside[28][5]  = true;
+		$is_beside[28][6]  = true;
+
+		$is_beside[14][13] = true;
+		$is_beside[14][29] = true;
+		$is_beside[14][9]  = true;
+
+		$is_beside[2][13] = true;
+		$is_beside[2][15] = true;
+		$is_beside[2][12] = true;
+		$is_beside[2][8]  = true;
+
+		$is_beside[20][27] = true;
+		$is_beside[20][19] = true;
+		$is_beside[20][17] = true;
+		$is_beside[20][11] = true;
+		$is_beside[20][6]  = true;
+		$is_beside[20][24] = true;
+		$is_beside[20][4]  = true;
+
+		$is_beside[13][14] = true;
+		$is_beside[13][9]  = true;
+		$is_beside[13][1]  = true;
+		$is_beside[13][31] = true;
+		$is_beside[13][6]  = true;
+		$is_beside[13][8]  = true;
+		$is_beside[13][2]  = true;
+
+		$is_beside[11][6]  = true;
+		$is_beside[11][10] = true;
+		$is_beside[11][1]  = true;
+		$is_beside[11][31] = true;
+		$is_beside[11][20] = true;
+		$is_beside[11][8]  = true;
+		$is_beside[11][17] = true;
+
+		$is_beside[23][21] = true;
+		$is_beside[23][5]  = true;
+		$is_beside[23][22] = true;
+		$is_beside[23][26] = true;
+
+		$is_beside[17][19] = true;
+		$is_beside[17][20] = true;
+		$is_beside[17][18] = true;
+		$is_beside[17][11] = true;
+		$is_beside[17][8]  = true;
+		$is_beside[17][12] = true;
+
+		$is_beside[25][5]  = true;
+		$is_beside[25][22] = true;
+		$is_beside[25][30] = true;
+
+		return $is_beside[ $source ][ $destination ] ?? false;
+	}
+
+	public function get_term_option( $term_id ): array {
+		return get_option( 'nabik_taxonomy_tapin_' . $term_id, [] );
+	}
+
+	public function set_term_option( $term_id, array $option ) {
+		update_option( 'nabik_taxonomy_tapin_' . $term_id, $option, false );
+	}
+
+	public function delete_term_option( $term_id ) {
+		delete_option( 'nabik_taxonomy_tapin_' . $term_id );
+	}
+
+	public static function shop(): array {
+
+		$shop_id = PWS()->get_option( 'tapin.shop_id' );
+
+		if ( empty( $shop_id ) ) {
+			return [];
+		}
+
+		$shop = get_transient( 'pws_tapin_shop_' . $shop_id );
+
+		if ( $shop === false || count( (array) $shop ) == 0 ) {
+
+			PWS_Tapin::set_gateway( PWS()->get_option( 'tapin.gateway' ) );
 
 			$shop = self::request( 'v2/public/shop/detail', [
-				'shop_id' => PWS()->get_options( 'pws_tapin_shop_id' )
-			] );
+				'shop_id' => $shop_id,
+			], true );
 
 			if ( is_wp_error( $shop ) ) {
-				return get_option( 'pws_tapin_shop' );
+				return [];
 			} else {
-				$shop = $shop->entries;
+				$shop = $shop['entries'];
 			}
 
-			set_transient( 'pws_tapin_shop', $shop, DAY_IN_SECONDS );
-			update_option( 'pws_tapin_shop', $shop );
+			set_transient( 'pws_tapin_shop_' . $shop_id, $shop, DAY_IN_SECONDS );
 		}
 
 		return $shop;
 	}
 
-	public static function price( $data ) {
+	public static function services(): array {
 
-		$url = 'https://public.api.tapin.ir/api/v1/public/check-price/';
+		if ( empty( PWS()->get_option( 'tapin.shop_id' ) ) ) {
+			return [];
+		}
 
-		$data['rate_type'] = self::$gateway;
+		$services = get_transient( 'pws_tapin_services' );
 
-		return self::request( '', $data, $url );
+		if ( empty( $services ) ) {
+
+			PWS_Tapin::set_gateway( PWS()->get_option( 'tapin.gateway' ) );
+
+			$_services = self::request( 'v4/location/public/all/city/filter/', [
+				'shop_id' => PWS()->get_option( 'tapin.shop_id' ),
+			], true );
+
+			if ( is_wp_error( $_services ) || ! isset( $_services['entries']['cities'] ) || $_services['entries']['is_public'] ) {
+				return get_option( 'pws_tapin_services', [] );
+			}
+
+			$services = [];
+
+			foreach ( $_services['entries']['cities'] as $service ) {
+
+				$services[ $service['pk'] ] = $service;
+
+				unset( $services[ $service['pk'] ]['pk'] );
+				unset( $services[ $service['pk'] ]['title'] );
+				unset( $services[ $service['pk'] ]['province_pk'] );
+				unset( $services[ $service['pk'] ]['province_title'] );
+
+				foreach ( $services[ $service['pk'] ] as &$city_services ) {
+					$city_services = array_filter( $city_services );
+				}
+
+				$services[ $service['pk'] ] = array_filter( $services[ $service['pk'] ] );
+
+				foreach ( $services[ $service['pk'] ] as &$city_services ) {
+					unset( $city_services['is_available'] );
+				}
+			}
+
+			set_transient( 'pws_tapin_services', $services, DAY_IN_SECONDS );
+			update_option( 'pws_tapin_services', $services );
+		}
+
+		return $services;
+	}
+
+	public static function has_service( int $city_id, string $service, $order_type = null ): bool {
+
+		$services = self::services();
+
+		if ( ! isset( $services[ $city_id ][ $service ] ) ) {
+			return false;
+		}
+
+		$order_types = $services[ $city_id ][ $service ]['order_types'] ?? [ null ];
+
+		if ( ! in_array( $order_type, $order_types ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	public static function set_gateway( string $gateway ) {
@@ -472,6 +674,28 @@ class PWS_Tapin extends PWS_Core {
 			self::$gateway = $gateway;
 		}
 
+	}
+
+	public static function get_gateway(): string {
+		return self::$gateway;
+	}
+
+	public static function box_sizes(): array {
+		return [
+			1  => 'کارتن پستی سایز ۱',
+			2  => 'کارتن پستی سایز ۲',
+			3  => 'کارتن پستی سایز ۳',
+			4  => 'کارتن پستی سایز ۴',
+			5  => 'کارتن پستی سایز ۵',
+			6  => 'کارتن پستی سایز ۶',
+			7  => 'کارتن پستی سایز ۷',
+			8  => 'کارتن پستی سایز ۸',
+			9  => 'کارتن پستی سایز ۹',
+			10 => 'بزرگتر از کارتن پستی سایز ۹',
+			11 => 'پاکت جوف A5',
+			12 => 'پاکت جوف A4',
+			13 => 'پاکت جوف A3',
+		];
 	}
 
 }

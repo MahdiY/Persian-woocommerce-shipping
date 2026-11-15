@@ -5,93 +5,117 @@
  * E-Mail    : M@hdiY.IR
  */
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+
+defined( 'ABSPATH' ) || exit;
+
 class PWS_Status {
 
-	public static $status = [
-		2 => 'pws-ready-to-ship',
+	public static array $status = [
+		2 => 'wc-pws-ready-to-ship',
 
-		1 => 'pws-packaged',
+		1 => 'wc-pws-packaged',
 
-		10 => 'pws-returned',
-		11 => 'pws-returned',
-		83 => 'pws-returned',
+		10  => 'wc-pws-returned',
+		11  => 'wc-pws-returned',
+		83  => 'wc-pws-returned',
+		102 => 'wc-pws-returned',
 
-		7  => 'completed',
-		70 => 'completed',
-		71 => 'completed',
-		72 => 'completed',
+		7  => 'wc-completed',
+		70 => 'wc-completed',
+		71 => 'wc-completed',
+		72 => 'wc-completed',
 
-		80 => 'pws-deleted',
+		80 => 'wc-pws-deleted',
 
-		5 => 'pws-shipping',
-		8 => 'pws-shipping',
+		5  => 'wc-pws-shipping',
+		13 => 'wc-pws-shipping',
+		14 => 'wc-pws-shipping',
+		15 => 'wc-pws-shipping',
+		16 => 'wc-pws-shipping',
+		17 => 'wc-pws-shipping',
+		50 => 'wc-pws-shipping',
 
-		3  => 'pws-need-review',
-		4  => 'pws-need-review',
-		6  => 'pws-need-review',
-		9  => 'pws-need-review',
-		12 => 'pws-need-review',
-		13 => 'pws-need-review',
-		81 => 'pws-need-review',
-		82 => 'pws-need-review',
+		3  => 'wc-pws-need-review',
+		4  => 'wc-pws-need-review',
+		6  => 'wc-pws-need-review',
+		8  => 'wc-pws-need-review',
+		9  => 'wc-pws-need-review',
+		12 => 'wc-pws-need-review',
+		81 => 'wc-pws-need-review',
+		82 => 'wc-pws-need-review',
+		18 => 'wc-pws-need-review',
 	];
 
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_order_statuses' ] );
 		add_filter( 'wc_order_statuses', [ $this, 'add_order_statuses' ], 10, 1 );
+		add_filter( 'woocommerce_reports_order_statuses', [ $this, 'reports_statuses' ], 10, 1 );
+		add_filter( 'woocommerce_order_is_paid_statuses', [ $this, 'paid_statuses' ], 10, 1 );
 		add_filter( 'bulk_actions-edit-shop_order', [ $this, 'bulk_actions' ], 20, 1 );
-		add_action( 'admin_head', [ $this, 'status_colors' ] );
+		add_filter( 'bulk_actions-woocommerce_page_wc-orders', [ $this, 'bulk_actions' ], 20, 1 );
+
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'persian-woocommerce-shipping-dokan/pws-dokan.php' ) ) {
+			return;
+		}
+
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_scripts' ] );
 
 		if ( PWS_Tapin::is_enable() ) {
-			add_action( 'admin_footer', [ $this, 'change_status' ] );
+			add_action( 'add_meta_boxes', [ $this, 'order_meta_box' ] );
+			add_action( 'save_post', [ $this, 'save_order_meta_box' ], 1000, 3 );
 			add_action( 'manage_posts_extra_tablenav', [ $this, 'top_order_list' ], 20, 1 );
+			add_action( 'woocommerce_order_list_table_extra_tablenav', [ $this, 'top_order_list' ], 20, 1 );
 			add_action( 'wp_ajax_pws_change_order_status', [ $this, 'change_status_callback' ] );
-			add_action( 'wp_ajax_nopriv_pws_change_order_status', [ $this, 'change_status_callback' ] );
+			add_filter( 'cron_schedules', [ $this, 'cron_schedules' ] );
 			add_action( 'wp', [ $this, 'check_status_scheduled' ] );
 			add_action( 'pws_check_status', [ $this, 'check_status_callback' ] );
+			add_action( 'woocommerce_orders_table_query_clauses', [ $this, 'orders_query_order_by_rand' ], 10, 3 );
 		}
 	}
 
-	public function get_statues() {
+	public static function get_statues(): array {
 
 		$statuses = [];
 
-		if ( PWS()->get_options( 'pws_status_enable' ) == 'yes' ) {
+		if ( PWS()->get_option( 'tools.status_enable', 1 ) == 1 ) {
 
-			$statuses['wc-pws-in-stock'] = 'ارسال شده به انبار';
-			$statuses['wc-pws-packaged'] = 'بسته بندی شده';
-			$statuses['wc-pws-courier']  = 'تحویل پیک';
+			$statuses['wc-pws-in-stock'] = __( 'ارسال شده به انبار' );
+			$statuses['wc-pws-packaged'] = __( 'بسته بندی شده' );
+			$statuses['wc-pws-courier']  = __( 'تحویل پیک' );
+			$statuses['wc-pws-post']     = __( 'تحویل پست' );
+			$statuses['wc-pws-tipax']    = __( 'تحویل تیپاکس' );
 
 		}
 
 		if ( PWS_Tapin::is_enable() ) {
-			$statuses['wc-pws-packaged']      = 'بسته بندی شده';
-			$statuses['wc-pws-ready-to-ship'] = 'آماده به ارسال';
-			$statuses['wc-pws-returned']      = 'برگشتی';
-			$statuses['wc-pws-deleted']       = 'حذف شده';
-			$statuses['wc-pws-shipping']      = 'در حال ارسال';
-			$statuses['wc-pws-need-review']   = 'نیازمند بررسی';
+			$statuses['wc-pws-packaged']      = __( 'بسته بندی شده' );
+			$statuses['wc-pws-ready-to-ship'] = __( 'آماده به ارسال' );
+			$statuses['wc-pws-returned']      = __( 'برگشتی' );
+			$statuses['wc-pws-deleted']       = __( 'حذف شده' );
+			$statuses['wc-pws-shipping']      = __( 'در حال ارسال' );
+			$statuses['wc-pws-need-review']   = __( 'نیازمند بررسی' );
 		}
 
-		return $statuses;
+		return apply_filters( 'pws_get_order_statuses', $statuses );
 	}
 
 	public function register_order_statuses() {
 
 		foreach ( $this->get_statues() as $status => $label ) {
-			register_post_status( $status, array(
+			register_post_status( $status, [
 				'label'                     => $label,
-				'public'                    => true,
+				'public'                    => false,
 				'exclude_from_search'       => false,
 				'show_in_admin_all_list'    => true,
 				'show_in_admin_status_list' => true,
-				'label_count'               => _n_noop( $label . ' <span class="count">(%s)</span>', $label . ' <span class="count">(%s)</span>' )
-			) );
+				'label_count'               => _n_noop( $label . ' <span class="count">(%s)</span>', $label . ' <span class="count">(%s)</span>' ),
+			] );
 		}
 
 	}
 
-	public function add_order_statuses( $order_statuses ) {
+	public function add_order_statuses( $order_statuses ): array {
 		$new_order_statuses = [];
 
 		foreach ( $order_statuses as $key => $status ) {
@@ -109,6 +133,42 @@ class PWS_Status {
 		return $new_order_statuses;
 	}
 
+	public function reports_statuses( $order_status ) {
+
+		if ( ! is_array( $order_status ) ) {
+			return $order_status;
+		}
+
+		$dont_report = [
+			'wc-pws-returned',
+			'wc-pws-deleted',
+		];
+
+		foreach ( $this->get_statues() as $status => $label ) {
+			if ( ! in_array( $status, $dont_report ) ) {
+				$order_status[] = str_replace( 'wc-', '', $status );
+			}
+		}
+
+		return $order_status;
+	}
+
+	public function paid_statuses( $order_status ) {
+
+		$dont_paid = [
+			'wc-pws-returned',
+			'wc-pws-deleted',
+		];
+
+		foreach ( $this->get_statues() as $status => $label ) {
+			if ( ! in_array( $status, $dont_paid ) ) {
+				$order_status[] = str_replace( 'wc-', '', $status );
+			}
+		}
+
+		return $order_status;
+	}
+
 	public function bulk_actions( $actions ) {
 
 		foreach ( $this->get_statues() as $status => $label ) {
@@ -119,198 +179,264 @@ class PWS_Status {
 		return $actions;
 	}
 
-	public function status_colors() {
-		echo '<style>
-		    mark.status-pws-in-stock {
-				background: #547F2D;
-				color: #fff;
-			}
-		    mark.status-pws-packaged {
-				background: #307079;
-				color: #fff;
-			}
-		    mark.status-pws-ready-to-ship {
-				background: #1D76DB;
-				color: #fff;
-			}
-		    mark.status-pws-returned {
-				background: rgba(182,2,4,0.74);
-				color: #fff;
-			}
-		    mark.status-pws-deleted {
-				background: #B60204;
-				color: #fff;
-			}
-		    mark.status-pws-shipping {
-				background: #0052CC;
-				color: #fff;
-			}
-		    mark.status-pws-need-review {
-				background: #FBC904;
-				color: #fff;
-			}
-		    mark.status-pws-courier {
-				background: #ec2b2ba1;
-				color: #681818;
-			}
-		  </style>';
-	}
+	public function enqueue_scripts() {
 
-	public function change_status() {
+		wp_enqueue_style( 'pws_order_status', PWS_URL . 'assets/css/status.css' );
+
+		if ( ! PWS_Tapin::is_enable() ) {
+			return;
+		}
 
 		$screen = get_current_screen();
 
-		if ( $screen->id == 'edit-shop_order' ) {
-			$this->change_status_list();
+		if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+
+			$page = $_GET['page'] ?? '';
+
+			if ( $page != 'wc-orders' ) {
+				return;
+			}
+
+			$action = $_GET['action'] ?? '';
+
+			if ( in_array( $action, [ 'new', 'edit' ] ) ) {
+				wp_enqueue_script( 'pws_tapin_order', PWS_URL . 'assets/js/tapin-order.js' );
+				wp_localize_script( 'pws_tapin_order', 'pws_tapin', [
+					'order_id' => intval( $_GET['id'] ?? 0 ),
+					'nonce'    => wp_create_nonce( 'pws_change_status' ),
+				] );
+			} else {
+				wp_enqueue_script( 'pws_tapin_list', PWS_URL . 'assets/js/tapin-list.js' );
+				wp_localize_script( 'pws_tapin_list', 'pws_tapin', [
+					'order_field'  => 'id',
+					'status_field' => 'tr#order-',
+					'nonce'        => wp_create_nonce( 'pws_change_status' ),
+				] );
+			}
+
+		} else {
+
+			if ( $screen->id == 'shop_order' ) {
+				wp_enqueue_script( 'pws_tapin_order', PWS_URL . 'assets/js/tapin-order.js' );
+				wp_localize_script( 'pws_tapin_order', 'pws_tapin', [
+					'order_id' => intval( $_GET['post'] ),
+					'nonce'    => wp_create_nonce( 'pws_change_status' ),
+				] );
+			}
+
+			if ( $screen->id == 'edit-shop_order' ) {
+				wp_enqueue_script( 'pws_tapin_list', PWS_URL . 'assets/js/tapin-list.js' );
+				wp_localize_script( 'pws_tapin_list', 'pws_tapin', [
+					'order_field'  => 'post',
+					'status_field' => 'tr#post-',
+					'nonce'        => wp_create_nonce( 'pws_change_status' ),
+				] );
+			}
+
 		}
-
-		if ( $screen->id == 'shop_order' ) {
-			$this->change_status_order();
-		}
-
-	}
-
-	private function change_status_list() {
-		?>
-        <script>
-			jQuery(document).ready(function ( $ ) {
-
-				let pws_IDs = [];
-				let pws_button_submit = $("#pws-tapin-submit");
-				let pws_button_ship = $("#pws-tapin-ship");
-
-				pws_button_submit.click(function () {
-					pws_change_status('pws-packaged');
-				});
-
-				pws_button_ship.click(function () {
-					pws_change_status('pws-ready-to-ship');
-				});
-
-				function pws_change_status( status ) {
-
-					pws_IDs = [];
-
-					$('.check-column input[name="post[]"]:checked').each(function () {
-						pws_IDs.push($(this).val());
-					});
-
-					if( pws_IDs.length === 0 ) {
-						alert('سفارشی جهت پردازش انتخاب نشده است.');
-						return false;
-					}
-
-					// Start
-					pws_button_submit.attr('disabled', 'disabled');
-					pws_button_ship.attr('disabled', 'disabled');
-					$('.pws-tips').remove();
-
-					pws_change_status_ajax(status);
-				}
-
-				function pws_change_status_ajax( status ) {
-
-					let id = pws_IDs.shift();
-
-					if( id == undefined ) {
-						// End
-						pws_button_submit.removeAttr('disabled');
-						pws_button_ship.removeAttr('disabled');
-						return true;
-					}
-
-					let data = {
-						'action': 'pws_change_order_status',
-						'status': status,
-						'id': id
-					};
-
-					$("tr#post-" + id + " td.order_status").html(`
-                        <mark class="order-status">
-                            <span>...</span>
-                        </mark>
-                    `);
-
-					$.post(ajaxurl, data).then(function ( response ) {
-
-						response = JSON.parse(response);
-
-						if( response.success ) {
-
-							$("tr#post-" + id + " td.order_status").html(`
-                                <mark class="order-status status-processing">
-                                    <span>${response.message}</span>
-                                </mark>
-                            `);
-
-						} else {
-
-							$("tr#post-" + id + " td.order_status").html(`
-                                <mark class="order-status status-pws-returned">
-                                    <span>خطا در پردازش</span>
-                                </mark>
-                            `);
-
-							$("tr#post-" + id + " td.column-order_number").append(`
-                                <mark class="order-status status-pws-returned pws-tips"
-                                        style="margin-top: 10px; font-size: 11px;">
-                                    <span>${response.message}</span>
-                                </mark>
-                            `);
-
-						}
-
-						pws_change_status_ajax(status);
-					});
-
-				}
-			});
-        </script>
-		<?php
-	}
-
-	private function change_status_order() {
-		// @todo
 	}
 
 	public function top_order_list( $which ) {
-		global $typenow;
 
-		if ( 'shop_order' === $typenow && 'top' === $which ) {
-			?>
-            <div class="alignleft actions custom">
-                <button type="button" id="pws-tapin-submit" class="button-primary"
-                        title="جهت ثبت سفارشات انتخاب شده در پنل تاپین و دریافت بارکد پستی، کلیک کنید.">ثبت در تاپین
-                </button>
-                <button type="button" id="pws-tapin-ship" class="button-primary"
-                        title="پس از ثبت سفارش در پنل، جهت اعلام به پست برای جمع آوری بسته اینجا کلیک کنید.">آماده ارسال
-                </button>
-            </div>
-			<?php
+		if ( ! in_array( get_current_screen()->id, [
+			'edit-shop_order',
+			wc_get_page_screen_id( 'shop-order' ),
+		] ) ) {
+			return;
 		}
+
+		if ( ! in_array( $which, [
+			'top',
+			'shop_order',
+		] ) ) {
+			return;
+		}
+
+		?>
+		<div class="alignleft actions custom">
+			<button type="button" id="pws-tapin-submit" class="button-primary"
+			        title="جهت ثبت سفارشات انتخاب شده در پنل تاپین و دریافت بارکد پستی، کلیک کنید.">ثبت در تاپین
+			</button>
+			<?php
+			if ( PWS()->get_option( 'tapin.register_type', 1 ) == 1 ) {
+				?>
+				<button type="button" id="pws-tapin-ship" class="button-primary"
+				        title="پس از ثبت سفارش در پنل، جهت اعلام به پست برای جمع آوری بسته اینجا کلیک کنید.">آماده ارسال
+				</button>
+				<?php
+			} ?>
+		</div>
+		<?php
+	}
+
+	public function order_meta_box() {
+		add_meta_box( 'tapin_order', 'تاپین', [
+			$this,
+			'order_meta_box_callback',
+		], [
+			'shop_order',
+			wc_get_page_screen_id( 'shop-order' ),
+		], 'side' );
+	}
+
+	/**
+	 * @param WC_Order|WP_Post $post_or_order_object
+	 *
+	 * @return void
+	 */
+	public function order_meta_box_callback( $post_or_order_object ) {
+
+		$order = ( $post_or_order_object instanceof WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
+
+		$order_uuid = $order->get_meta( 'tapin_order_uuid' );
+
+		$tapin_weight    = PWS_Order::get_weight( $order );
+		$content_type    = PWS_Order::get_content_type( $order );
+		$box_size        = PWS_Order::get_box_size( $order );
+		$shipping_method = PWS_Order::get_shipping_method( $order )
+
+		?>
+
+		<?php if ( empty( $order_uuid ) ) { ?>
+
+			<p class="form-field-wide">
+				<label for="tapin_weight">وزن سفارش:</label>
+				<input type="number" name="tapin_weight" id="tapin_weight" style="width: 100%"
+				       value="<?php echo intval( $tapin_weight ); ?>">
+			</p>
+
+			<p class="form-field-wide">
+				<label>نوع مرسوله:</label>
+				<select style="width: 100%" name="tapin_content_type" id="tapin_content_type">
+					<option value="1" <?php selected( 1, $content_type ); ?>>عادی</option>
+					<option value="2" <?php selected( 2, $content_type ); ?>>شکستنی</option>
+					<option value="3" <?php selected( 3, $content_type ); ?>>مایعات</option>
+				</select>
+			</p>
+
+			<p class="form-field-wide">
+				<label>حجم مرسوله:</label>
+				<select style="width: 100%" name="tapin_box_size" id="tapin_box_size">
+					<?php
+
+					foreach ( PWS_Tapin::box_sizes() as $value => $label ) {
+						printf( '<option value="%d" %s>%s</option>',
+							$value,
+							selected( $value, $box_size, false ),
+							$label
+						);
+					}
+
+					?>
+				</select>
+			</p>
+
+			<button type="button" id="pws-tapin-submit" class="button-primary"
+			        title="جهت ثبت سفارشات انتخاب شده در پنل تاپین و دریافت بارکد پستی، کلیک کنید.">ثبت در تاپین
+			</button>
+		<?php } else { ?>
+
+			<p class="form-field-wide">
+				<label>وزن سفارش:</label>
+				<input type="number" style="width: 100%"
+				       value="<?php echo intval( $tapin_weight ); ?>" disabled="disabled">
+			</p>
+
+			<p class="form-field-wide">
+				<label>نوع ارسال:</label>
+				<select style="width: 100%" disabled="disabled">
+					<option value="" <?php selected( null, $shipping_method ); ?>>غیرپستی</option>
+					<option value="0" <?php selected( 0, $shipping_method ); ?>>پست سفارشی</option>
+					<option value="1" <?php selected( 1, $shipping_method ); ?>>پست پیشتاز</option>
+					<option value="3" <?php selected( 3, $shipping_method ); ?>>پست ویژه</option>
+					<option value="tipax" <?php selected( 'tipax', $shipping_method ); ?>>تیپاکس</option>
+					<option value="alonomic" <?php selected( 'alonomic', $shipping_method ); ?>>الونومیک</option>
+				</select>
+			</p>
+
+			<p class="form-field-wide">
+				<label>نوع مرسوله:</label>
+				<select style="width: 100%" disabled="disabled">
+					<option value="1" <?php selected( 1, $content_type ); ?>>عادی</option>
+					<option value="2" <?php selected( 2, $content_type ); ?>>شکستنی</option>
+					<option value="3" <?php selected( 3, $content_type ); ?>>مایعات</option>
+				</select>
+			</p>
+
+			<?php
+			if ( PWS()->get_option( 'tapin.register_type', 1 ) == 1 ) {
+				?>
+				<button type="button" id="pws-tapin-ship" class="button-primary"
+				        title="پس از ثبت سفارش در پنل، جهت اعلام به پست برای جمع آوری بسته اینجا کلیک کنید.">آماده ارسال
+				</button>
+				<?php
+			}
+		}
+
+		?>
+		<div class="pws-tips" style="margin-top: 15px;"></div>
+		<?php
+	}
+
+	public function save_order_meta_box( $order_id, $post, $update ) {
+
+		$order = wc_get_order( $order_id );
+
+		if ( is_bool( $order ) ) {
+			return;
+		}
+
+		$order_uuid = $order->get_meta( 'tapin_order_uuid' );
+
+		if ( ! empty( $order_uuid ) ) {
+			return;
+		}
+
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( get_post_status( $order_id ) === 'auto-draft' ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['tapin_weight'], $_POST['tapin_content_type'], $_POST['tapin_box_size'] ) ) {
+			return;
+		}
+
+		$order->update_meta_data( 'tapin_weight', floatval( $_POST['tapin_weight'] ) );
+		$order->update_meta_data( 'tapin_content_type', intval( $_POST['tapin_content_type'] ) );
+		$order->update_meta_data( 'tapin_box_size', intval( $_POST['tapin_box_size'] ) );
+		$order->save_meta_data();
 	}
 
 	public function change_status_callback() {
 
-		$status = $_POST['status'] ?? null;
+		check_ajax_referer( 'pws_change_status' );
 
-		if ( is_null( $status ) || ! in_array( 'wc-' . $status, array_keys( wc_get_order_statuses() ) ) ) {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( - 1 );
+		}
+
+		$status = sanitize_text_field( $_POST['status'] ?? null );
+
+		if ( ! wc_is_order_status( 'wc-' . $status ) ) {
 
 			echo json_encode( [
 				'success' => false,
-				'message' => 'وضعیت انتخاب شده معتبر نمی باشد.'
+				'message' => 'وضعیت انتخاب شده معتبر نمی باشد.',
 			] );
 
 			die();
 		}
 
-		$order_id = $_POST['id'] ?? null;
+		$order_id = intval( $_POST['id'] ?? null );
 
-		if ( is_null( $order_id ) || ! is_numeric( $order_id ) ) {
+		if ( empty( $order_id ) ) {
 
 			echo json_encode( [
 				'success' => false,
-				'message' => 'سفارش انتخاب شده معتبر نمی باشد.'
+				'message' => 'سفارش انتخاب شده معتبر نمی باشد.',
 			] );
 
 			die();
@@ -319,29 +445,45 @@ class PWS_Status {
 		/** @var WC_Order $order */
 		$order = wc_get_order( $order_id );
 
-		if ( $order == false ) {
+		if ( is_bool( $order ) ) {
 
 			echo json_encode( [
 				'success' => false,
-				'message' => 'سفارش انتخاب شده وجود ندارد.'
+				'message' => 'سفارش انتخاب شده وجود ندارد.',
 			] );
 
 			die();
 		}
 
-		$tapin_method = get_post_meta( $order_id, 'tapin_method', true );
+		if ( isset( $_POST['weight'] ) ) {
+			$order->add_meta_data( 'tapin_weight', floatval( $_POST['weight'] ), true );
+		}
 
-		if ( empty( $tapin_method ) ) {
+		if ( isset( $_POST['content_type'] ) ) {
+			$order->add_meta_data( 'tapin_content_type', intval( $_POST['content_type'] ), true );
+		}
+
+		if ( isset( $_POST['box_size'] ) ) {
+			$order->add_meta_data( 'tapin_box_size', intval( $_POST['box_size'] ), true );
+		}
+
+		$order->save_meta_data();
+
+		$tapin_post_type = PWS_Order::get_shipping_method( $order );
+
+		if ( is_null( $tapin_post_type ) ) {
 
 			echo json_encode( [
 				'success' => false,
-				'message' => 'روش ارسال این سفارش تاپین نیست.'
+				'message' => 'روش ارسال این سفارش تاپین نیست.',
 			] );
 
 			die();
 		}
 
-		$tapin_order_uuid = get_post_meta( $order_id, 'tapin_order_uuid', true );
+		do_action( 'pws_tapin_pre_submit_order', $order );
+
+		$tapin_order_uuid = $order->get_meta( 'tapin_order_uuid' );
 
 		if ( $status == 'pws-packaged' ) { // Submit & get post barcode
 
@@ -349,100 +491,159 @@ class PWS_Status {
 
 				echo json_encode( [
 					'success' => false,
-					'message' => 'این سفارش قبلا در پنل ثبت شده است.'
+					'message' => 'این سفارش قبلا در پنل ثبت شده است.',
 				] );
 
 				die();
 			}
 
-			$total_weight = $tapin_method['package_weight'];
+			$products           = PWS_Order::tapin_post_products( $order, PWS()->get_option( 'tapin.product_title' ) );
+			$order_weight       = PWS_Order::get_weight( $order );
+			$tapin_content_type = PWS_Order::get_content_type( $order );
+			$tapin_box_size     = PWS_Order::get_box_size( $order );
 
-			$products = [];
+			$tapin_pay_type = PWS_Order::get_shipping_payment_type( $order ) == 'postpaid' ? 2 : 1;
 
-			foreach ( $order->get_items() as $order_item ) {
+			$tapin_packet_type = 2;
 
-				/** @var WC_Product $product */
-				$product = $order_item->get_product();
+			if ( in_array( $tapin_box_size, [ 11, 12, 13 ] ) ) {
+				$tapin_packet_type = 3;
 
-				if ( $product->is_virtual() ) {
-					continue;
+				if ( $order_weight > 2_000 ) {
+
+					echo json_encode( [
+						'success' => false,
+						'message' => 'وزن مرسوله‌های پاکت A4، A5 و A3 باید کمتر از ۲۰۰۰ گرم باشد.',
+					] );
+
+					die();
 				}
-
-				if ( $product->has_weight() ) {
-					$weight = wc_get_weight( $product->get_weight(), 'g' );
-				} else {
-					$weight = $tapin_method['default_weight'];
-				}
-
-				$price = $order_item->get_total() / $order_item->get_quantity();
-
-				$total_weight += $weight * $order_item->get_quantity();
-
-				if ( get_woocommerce_currency() == 'IRT' ) {
-					$price *= 10;
-				}
-
-				$products[] = [
-					'count'      => $order_item->get_quantity(),
-					'discount'   => 0,
-					'price'      => $price,
-					'title'      => $product->get_title(),
-					'weight'     => $weight,
-					'product_id' => null,
-				];
 			}
 
-			$data = [
-				'register_type'  => 1,
-				'shop_id'        => PWS()->get_options( 'pws_tapin_shop_id' ),
-				'address'        => $order->get_shipping_address_1() . ' ' . $order->get_shipping_address_2(),
-				'city_code'      => $order->get_meta( '_shipping_city_id' ),
-				'province_code'  => $order->get_meta( '_shipping_state_id' ),
-				'description'    => null,
+			if ( $order->get_payment_method() == 'cod' ) {
+				$tapin_pay_type = 3;
+
+				if ( $order->get_shipping_total() ) {
+
+					$products['shipping'] = [
+						'count'      => 1,
+						'discount'   => 0,
+						'price'      => PWS()->convert_currency_to_IRR( $order->get_shipping_total() ),
+						'title'      => __( 'هزینه ارسال + بسته بندی' ),
+						'weight'     => 0,
+						'product_id' => null,
+					];
+
+				}
+
+			}
+
+			if ( wc_ship_to_billing_address_only() ) {
+				$address       = $order->get_billing_address_1() . ' ' . $order->get_billing_address_2();
+				$city_code     = $order->get_meta( '_billing_city_id' );
+				$province_code = $order->get_meta( '_billing_state_id' );
+				$first_name    = $order->get_billing_first_name();
+				$last_name     = $order->get_billing_last_name();
+				$postcode      = $order->get_billing_postcode();
+			} else {
+				$address       = $order->get_shipping_address_1() . ' ' . $order->get_shipping_address_2();
+				$city_code     = $order->get_meta( '_shipping_city_id' );
+				$province_code = $order->get_meta( '_shipping_state_id' );
+				$first_name    = $order->get_shipping_first_name();
+				$last_name     = $order->get_shipping_last_name();
+				$postcode      = $order->get_shipping_postcode();
+			}
+
+			$data = apply_filters( 'pws_tapin_submit_order', [
+				'register_type'  => PWS()->get_option( 'tapin.register_type', 1 ),
+				'shop_id'        => PWS()->get_option( 'tapin.shop_id' ),
+				'address'        => $address,
+				'city_code'      => $city_code,
+				'province_code'  => $province_code,
+				'description'    => empty( $order->get_customer_note() ) ? null : $order->get_customer_note(),
 				'email'          => null,
 				'employee_code'  => '-1',
-				'first_name'     => $order->get_shipping_first_name(),
-				'last_name'      => $order->get_shipping_last_name(),
-				'mobile'         => $order->get_billing_phone(),
+				'first_name'     => $first_name,
+				'last_name'      => $last_name,
+				'mobile'         => str_replace( '+98', '0', $order->get_billing_phone() ),
 				'phone'          => null,
-				'postal_code'    => $order->get_shipping_postcode(),
-				'pay_type'       => $order->get_payment_method() == 'cod' ? 0 : 1,
-				'order_type'     => $tapin_method['post_type'],
-				'package_weight' => $tapin_method['package_weight'],
-				'presenter_code' => 1025,
-				'products'       => $products
-			];
+				'postal_code'    => $postcode,
+				'pay_type'       => $tapin_pay_type,
+				'order_type'     => $tapin_post_type,
+				'packet_type'    => $tapin_packet_type,
+				'content_type'   => $tapin_content_type,
+				'box_id'         => $tapin_box_size,
+				'package_weight' => $order_weight,
+				'products'       => $products,
+				'manual_id'      => $order_id,
+			], $order );
 
-			PWS_Tapin::set_gateway( PWS()->get_options( 'pws_tapin_gateway' ) );
+			$data['presenter_code'] = 1025;
+			$data['products']       = array_values( $data['products'] );
+
+			PWS_Tapin::set_gateway( PWS()->get_option( 'tapin.gateway' ) );
 
 			$response = PWS_Tapin::request( 'v2/public/order/post/register', $data );
 
-			if ( is_wp_error( $response ) || $response->returns->status != 200 ) {
+			if ( is_wp_error( $response ) ) {
 
 				echo json_encode( [
 					'success' => false,
-					'message' => $response->returns->message,
+					'message' => implode( '<br>', $response->get_error_messages() ),
+				] );
+
+				die();
+
+			} else if ( ! in_array( $response->returns->status, [ 200, 770 ] ) ) {
+
+				PWS()->log( __METHOD__ . ' Line: ' . __LINE__ );
+				PWS()->log( $data );
+				PWS()->log( $response );
+
+				$errors = [];
+
+				foreach ( (array) $response->entries as $key => $message ) {
+					if ( is_string( $message[0] ) ) {
+						$errors[] = "{$key} > {$message[0]}";
+					}
+				}
+
+				echo json_encode( [
+					'success' => false,
+					'message' => $response->returns->message . '<br>' . implode( '<br>', $errors ),
 				] );
 
 				die();
 			}
 
-			update_post_meta( $order_id, 'tapin_order_uuid', $response->entries->id );
-			update_post_meta( $order_id, 'tapin_order_id', $response->entries->order_id );
-			update_post_meta( $order_id, 'tapin_send_price', $response->entries->send_price );
-			update_post_meta( $order_id, 'tapin_send_price_tax', $response->entries->send_price_tax );
-			update_post_meta( $order_id, 'tapin_send_time', time() );
-			update_post_meta( $order_id, 'tapin_weight', $total_weight );
-			update_post_meta( $order_id, 'post_barcode', $response->entries->barcode );
+			if ( empty( $response->entries->barcode ) ) {
+				echo json_encode( [
+					'success' => false,
+					'message' => 'بارکد صادر نشد، لطفا مجددا تلاش کنید.',
+				] );
 
-			do_action( 'pws_save_order_post_barcode', $order, $response->entries->barcode );
+				die();
+			}
+
+			$order->update_meta_data( 'tapin_order_uuid', $response->entries->id );
+			$order->update_meta_data( 'tapin_order_id', $response->entries->order_id );
+			$order->update_meta_data( 'tapin_send_price', $response->entries->send_price );
+			$order->update_meta_data( 'tapin_send_price_tax', $response->entries->send_price_tax );
+			$order->update_meta_data( 'tapin_send_time', time() );
+			$order->update_meta_data( 'tapin_weight', $order_weight );
+			$order->update_meta_data( 'tapin_content_type', $tapin_content_type );
+			$order->update_meta_data( 'tapin_box_size', $tapin_box_size );
+			$order->update_meta_data( 'post_barcode', $response->entries->barcode );
 
 			$note = "بارکد پستی مرسوله شما: {$response->entries->barcode}
-                        می توانید مرسوله خود را از طریق لینک https://newtracking.post.ir رهگیری نمایید.";
+                        می توانید مرسوله خود را از طریق لینک https://radgir.net رهگیری نمایید.";
 
-			$order->set_status( $status );
+			$order->set_status( $status, 'تاپین -' );
 			$order->save();
+
 			$order->add_order_note( $note, 1 );
+
+			do_action( 'pws_save_order_post_barcode', $order, $response->entries->barcode );
 
 			echo json_encode( [
 				'success' => true,
@@ -457,33 +658,57 @@ class PWS_Status {
 
 				echo json_encode( [
 					'success' => false,
-					'message' => 'سفارش در پنل ثبت نشده است.'
+					'message' => 'سفارش در تاپین ثبت نشده است.',
 				] );
 
 				die();
 			}
 
-			$tapin_order_id = get_post_meta( $order_id, 'tapin_order_id', true );
+			$tapin_order_id = $order->get_meta( 'tapin_order_id' );
 
 			$data = [
-				'shop_id'  => PWS()->get_options( 'pws_tapin_shop_id' ),
+				'shop_id'  => PWS()->get_option( 'tapin.shop_id' ),
 				'order_id' => $tapin_order_id,
-				'status'   => 2
+				'status'   => 2,
 			];
 
-			PWS_Tapin::set_gateway( PWS()->get_options( 'pws_tapin_gateway' ) );
+			PWS_Tapin::set_gateway( PWS()->get_option( 'tapin.gateway' ) );
 
 			$response = PWS_Tapin::request( 'v2/public/order/post/change-status', $data );
 
-			if ( is_wp_error( $response ) || $response->returns->status != 200 ) {
+			if ( is_wp_error( $response ) ) {
 
 				echo json_encode( [
 					'success' => false,
-					'message' => $response->returns->message,
+					'message' => implode( '<br>', $response->get_error_messages() ),
+				] );
+
+				die();
+
+			} else if ( $response->returns->status != 200 ) {
+
+				PWS()->log( __METHOD__ . ' Line: ' . __LINE__ );
+				PWS()->log( $data );
+				PWS()->log( $response );
+
+				$errors = [];
+
+				foreach ( (array) $response->entries as $key => $message ) {
+					if ( is_string( $message[0] ) ) {
+						$errors[] = "{$key} > {$message[0]}";
+					}
+				}
+
+				echo json_encode( [
+					'success' => false,
+					'message' => $response->returns->message . '<br>' . implode( '<br>', $errors ),
 				] );
 
 				die();
 			}
+
+			$order->set_status( $status, 'تاپین -' );
+			$order->save();
 
 			echo json_encode( [
 				'success' => true,
@@ -496,7 +721,7 @@ class PWS_Status {
 
 			echo json_encode( [
 				'success' => false,
-				'message' => "ابتدا باید به 'بسته بندی شده' تغییر وضعیت دهید."
+				'message' => "ابتدا باید به 'بسته بندی شده' تغییر وضعیت دهید.",
 			] );
 
 			die();
@@ -505,80 +730,108 @@ class PWS_Status {
 
 	}
 
-	public function check_status_scheduled() {
-		if ( ! wp_next_scheduled( 'pws_check_status' ) ) {
-			wp_schedule_event( time(), 'hourly', 'pws_check_status' );
-		}
-	}
-
-	public function check_status_callback() {
-
-		$args_query = [
-			'post_type'   => [ 'shop_order' ],
-			'post_status' => [
-				self::$status[1],
-				self::$status[2],
-				self::$status[5],
-				self::$status[8],
-			],
-			'nopaging'    => true,
-			'order'       => 'DESC',
-			'meta_key'    => 'tapin_order_uuid',
+	public function cron_schedules( array $schedules ): array {
+		$schedules['per_quarter'] = [
+			'interval' => 15 * MINUTE_IN_SECONDS,
+			'display'  => __( 'A Quarter' ),
 		];
 
-		$query = new WP_Query( $args_query );
+		return $schedules;
+	}
 
-		$posts = array_column( $query->posts, 'ID' );
+	public function check_status_scheduled() {
+		if ( ! wp_next_scheduled( 'pws_check_status' ) ) {
+			wp_schedule_event( time(), 'per_quarter', 'pws_check_status' );
+		}
+	}
 
-		$posts = array_map( function( $post_id ) {
+	public static function check_status_callback() {
+
+		$args = apply_filters( 'pws_tapin_check_status_orders', [
+			'type'       => [ 'shop_order' ],
+			'status'     => [
+				'wc-pws-packaged',
+				'wc-pws-ready-to-ship',
+				'wc-pws-shipping',
+				'wc-pws-deleted',
+				'wc-pws-need-review',
+			],
+			'limit'      => 100,
+			'orderby'    => 'rand',
+			'pwsorderby' => 'rand', // Remove after OrdersTableQuery::sanitize_order_orderby mapping completed
+			'meta_query' => [
+				[
+					'key' => 'tapin_order_uuid',
+				],
+			],
+		] );
+
+		$orders = wc_get_orders( $args );
+
+		$orders = array_map( function ( WC_Order $order ) {
 			return [
-				'id'      => get_post_meta( $post_id, 'tapin_order_uuid', true ),
-				'post_id' => $post_id
+				'order_uuid' => $order->get_meta( 'tapin_order_uuid' ),
+				'order'      => $order,
 			];
-		}, $posts );
+		}, $orders );
+		$orders = array_filter( $orders, function ( $row ) {
+			return ! empty( $row['order_uuid'] );
+		} );
 
-		if ( count( $posts ) ) {
+		/** @var WC_Order[] $orders */
+		$orders = array_column( $orders, 'order', 'order_uuid' );
 
-			PWS_Tapin::set_gateway( PW()->get_options( 'pws_tapin_gateway' ) );
+		if ( count( $orders ) == 0 ) {
+			return false;
+		}
 
-			$statuses = PWS_Tapin::request( 'v2/public/order/post/get-status/bulk', [
-				'shop_id' => PWS()->get_options( 'pws_tapin_shop_id' ),
-				'orders'  => $posts
-			] );
+		PWS_Tapin::set_gateway( PWS()->get_option( 'tapin.gateway' ) );
 
-			if ( is_wp_error( $statuses ) ) {
-				return false;
+		$statuses = PWS_Tapin::request( 'v2/public/order/post/get-status/bulk', [
+			'shop_id' => PWS()->get_option( 'tapin.shop_id' ),
+			'orders'  => array_map( function ( string $uuid ) {
+				return [ 'id' => $uuid ];
+			}, array_keys( $orders ) ),
+		] );
+
+		if ( is_wp_error( $statuses ) || ! isset( $statuses->entries->list ) || ! is_array( $statuses->entries->list ) ) {
+			return false;
+		}
+
+		$order_statuses = array_column( $statuses->entries->list, 'status', 'id' );
+
+		foreach ( $orders as $order_uuid => $order ) {
+
+			if ( ! isset( $order_statuses[ $order_uuid ] ) ) {
+				continue;
 			}
 
-			$orders = array_column( $statuses->entries->list, null, 'id' );
+			$status = $order_statuses[ $order_uuid ];
+			$status = self::$status[ $status ] ?? null;
 
-			foreach ( $posts as $post ) {
+			if ( is_null( $status ) ) {
+				continue;
+			}
 
-				if ( isset( $orders[ $post['id'] ] ) ) {
-
-					$status = $orders[ $post['id'] ]->status;
-
-					$status = self::$status[ $status ] ?? null;
-
-					if ( ! is_null( $status ) ) {
-
-						/** @var WC_Order $order */
-						$order = wc_get_order( $post['post_id'] );
-
-						if ( $order->get_status() != $status ) {
-							$order->set_status( $status, 'بروزرسانی خودکار تاپین -' );
-							$order->save();
-						}
-
-					}
-				}
-
+			if ( $order->get_status() != $status ) {
+				$order->set_status( $status, 'بروزرسانی خودکار تاپین -' );
+				$order->save();
 			}
 
 		}
 
-		wp_reset_postdata();
 	}
+
+	public function orders_query_order_by_rand( $clauses, $query, $args ) {
+		// Remove after OrdersTableQuery::sanitize_order_orderby mapping completed
+
+		if ( isset( $args['pwsorderby'] ) && $args['pwsorderby'] == 'rand' ) {
+			$clauses['orderby'] = 'RAND()';
+		}
+
+		return $clauses;
+	}
+
 }
 
 new PWS_Status();

@@ -3,16 +3,36 @@
  * Developer : MahdiY
  * Web Site  : MahdiY.IR
  * E-Mail    : M@hdiY.IR
+ * اَلسَّلامُ عَلَى الْحُسَيْنِ
+ * وَ عَلى عَلِىِّ بْنِ الْحُسَيْنِ
+ * وَ عَلى اَوْلادِ الْحُسَيْنِ
+ * وَ عَلى اَصْحابِ الْحُسَيْنِ
  */
+
+defined( 'ABSPATH' ) || exit;
 
 class PWS_Core {
 
 	/**
-	 * Shipping methods.
+	 * Appending shipping methods.
 	 *
 	 * @var array
 	 */
 	public static $methods = [];
+
+	/**
+	 * All shipping methods
+	 *
+	 * @var array
+	 */
+	public static $all_shipping_methods = [];
+
+	/**
+	 * Shipping zones
+	 *
+	 * @var array
+	 */
+	public static $all_shipping_zones = [];
 
 	/**
 	 * The single instance of the class.
@@ -24,8 +44,8 @@ class PWS_Core {
 	/**
 	 * Ensures only one instance of PWS_Core is loaded or can be loaded.
 	 *
-	 * @see PWS()
 	 * @return PWS_Core
+	 * @see PWS()
 	 */
 	public static function instance() {
 
@@ -43,7 +63,6 @@ class PWS_Core {
 
 		self::$methods = [
 			'WC_Courier_Method',
-			'WC_Custom_Method',
 			'WC_Forehand_Method',
 			'WC_Tipax_Method',
 		];
@@ -55,19 +74,18 @@ class PWS_Core {
 	 * Hook into actions and filters.
 	 */
 	protected function init_hooks() {
+		$this->state_city_taxonomy();
+
 		// Actions
-		add_action( 'init', [ $this, 'state_city_taxonomy' ], 0 );
-		add_action( 'admin_menu', [ $this, 'state_city_admin_menu' ] );
-		add_action( 'woocommerce_after_order_notes', [ $this, 'load_child_term' ] );
 		add_action( 'wp_ajax_mahdiy_load_cities', [ PWS_Ajax::class, 'load_cities_callback' ] );
 		add_action( 'wp_ajax_nopriv_mahdiy_load_cities', [ PWS_Ajax::class, 'load_cities_callback' ] );
 		add_action( 'wp_ajax_mahdiy_load_districts', [ PWS_Ajax::class, 'load_districts_callback' ] );
 		add_action( 'wp_ajax_nopriv_mahdiy_load_districts', [ PWS_Ajax::class, 'load_districts_callback' ] );
 		add_action( 'woocommerce_shipping_init', [ $this, 'load_shipping_init' ] );
-		add_action( 'woocommerce_process_shop_order_meta', [ $this, 'process_shop_order_meta' ], 1000, 2 );
 		add_action( 'woocommerce_checkout_update_order_review', [ $this, 'checkout_update_order_review' ], 10, 1 );
 		add_action( 'woocommerce_admin_field_pws_single_country', [ $this, 'pws_single_country_field' ], 10, 1 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_select2_scripts' ], 1000 );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_scripts' ], 1000 );
 
 		// Filters
 		add_filter( 'woocommerce_shipping_methods', [ $this, 'add_shipping_method' ] );
@@ -83,47 +101,45 @@ class PWS_Core {
 		add_filter( 'woocommerce_form_field_billing_district', [ $this, 'checkout_cities_field' ], 11, 4 );
 		add_filter( 'woocommerce_form_field_shipping_district', [ $this, 'checkout_cities_field' ], 11, 4 );
 		add_filter( 'woocommerce_cart_shipping_packages', [ $this, 'cart_shipping_packages' ], 20, 1 );
-		add_filter( 'woocommerce_cart_shipping_method_full_label', [ $this, 'shipping_method_image' ], 10, 2 );
+		add_filter( 'woocommerce_cart_shipping_method_full_label', [ $this, 'shipping_method_image' ], 100, 2 );
 		add_filter( 'woocommerce_localisation_address_formats', [ $this, 'localisation_address_formats' ], 20, 1 );
 		add_filter( 'woocommerce_order_formatted_shipping_address', [
 			$this,
-			'order_formatted_shipping_address'
+			'order_formatted_shipping_address',
 		], 20, 2 );
 		add_filter( 'woocommerce_order_formatted_billing_address', [
 			$this,
-			'order_formatted_billing_address'
+			'order_formatted_billing_address',
 		], 00, 2 );
 		add_filter( 'woocommerce_formatted_address_replacements', [
 			$this,
-			'formatted_address_replacements'
+			'formatted_address_replacements',
 		], 10, 2 );
 		add_filter( 'woocommerce_my_account_my_address_formatted_address', [
 			$this,
-			'my_account_my_address_formatted_address'
+			'my_account_my_address_formatted_address',
 		], 10, 3 );
-		add_filter( 'persian_woo_sms_content_replace', [ $this, 'persian_woo_sms_content_replace' ], 10, 6 );
-		add_filter( 'woocommerce_admin_billing_fields', [ $this, 'admin_billing_fields' ] );
-		// @todo uncomment after pull request accepted
-		//add_filter( 'woocommerce_admin_shipping_fields', [ $this,'admin_shipping_fields'] );
 		add_filter( 'woocommerce_checkout_get_value', [ $this, 'checkout_get_value' ], 10, 2 );
 	}
-
-	// Actions
 
 	public function state_city_taxonomy() {
 
 		$labels = [
-			'name'              => __( 'شهر ها' ),
-			'singular_name'     => __( 'شهر ها' ),
-			'search_items'      => __( 'جستجو شهر' ),
-			'all_items'         => __( 'همه شهر ها' ),
-			'parent_item'       => __( 'استان' ),
-			'parent_item_colon' => __( 'استان' ),
-			'edit_item'         => __( 'ویرایش شهر' ),
-			'update_item'       => __( 'بروزرسانی شهر' ),
-			'add_new_item'      => __( 'افزودن شهر جدید' ),
-			'new_item_name'     => __( 'نام شهر جدید' ),
-			'menu_name'         => __( 'شهر های حمل و نقل' ),
+			'name'                     => __( 'شهرها' ),
+			'singular_name'            => __( 'شهرها' ),
+			'search_items'             => __( 'جستجو شهر' ),
+			'all_items'                => __( 'همه شهرها' ),
+			'parent_item'              => __( 'استان' ),
+			'parent_item_colon'        => __( 'استان' ),
+			'edit_item'                => __( 'ویرایش شهر' ),
+			'update_item'              => __( 'بروزرسانی شهر' ),
+			'add_new_item'             => __( 'افزودن شهر جدید' ),
+			'new_item_name'            => __( 'نام شهر جدید' ),
+			'menu_name'                => __( 'شهرهای حمل و نقل' ),
+			'name_field_description'   => __( 'نام نمایشی شهر یا استان را وارد کنید.' ),
+			'slug_field_description'   => __( 'نامک شهر یا استان را وارد کنید.' ),
+			'parent_field_description' => __( 'در صورت عدم انتخاب استان، مورد جدید بعنوان یک استان شناخته خواهد شد.' ),
+			'desc_field_description'   => __( 'توضیحات مرتبط با شهر یا استان را وارد کنید.' ),
 		];
 
 		register_taxonomy( 'state_city', null, [
@@ -136,7 +152,7 @@ class PWS_Core {
 			'show_in_quick_edit' => false,
 			'show_admin_column'  => false,
 			'_builtin'           => true,
-			'meta_box_cb'        => false
+			'meta_box_cb'        => false,
 		] );
 
 		if ( function_exists( 'PW' ) && PW()->get_options( 'enable_iran_cities' ) != 'no' ) {
@@ -144,151 +160,16 @@ class PWS_Core {
 			$settings['enable_iran_cities'] = 'no';
 			update_option( 'PW_Options', $settings );
 		}
-
-		if ( get_option( 'sabira_set_iran_cities', 0 ) || get_option( 'pws_install_cities', 0 ) ) {
-			return false;
-		}
-
-		foreach ( PWS_get_states() as $key => $state ) {
-			$term = wp_insert_term( $state, 'state_city', [ 'slug' => $key, 'description' => "استان $state" ] );
-
-			if ( is_wp_error( $term ) ) {
-				continue;
-			}
-
-			foreach ( PWS_get_state_city( $key ) as $city ) {
-				wp_insert_term( $city, 'state_city', [
-					'parent'      => $term['term_id'],
-					'description' => "$state - $city"
-				] );
-			}
-		}
-
-		update_option( "pws_version", PWS_VERSION );
-		update_option( "pws_install_cities", 1 );
-	}
-
-	public function state_city_admin_menu() {
-		$title = 'شهر های حمل و نقل';
-
-		add_submenu_page( 'woocommerce', $title, $title, 'manage_woocommerce', 'edit-tags.php?taxonomy=state_city&post_type=shop_order' );
-	}
-
-	public function load_child_term() {
-
-		$types = $this->types();
-
-		?>
-        <script type="text/javascript">
-			let mahdiy_ajax_url = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-			
-			jQuery(document).ready(function ( $ ) {
-
-				<?php foreach( $types as $type ) { ?>
-				
-				function <?php echo $type; ?>_mahdiy_state_changed() {
-					
-					let data = {
-						'action': 'mahdiy_load_cities',
-						'state_id': $('#<?php echo $type; ?>_state').val(),
-						'type': '<?php echo $type; ?>'
-					};
-					
-					$.post(mahdiy_ajax_url, data, function ( response ) {
-						$('select#<?php echo $type; ?>_city').html(response);
-					});
-					
-					$('select#<?php echo $type; ?>_city').select2();
-					$('p#<?php echo $type; ?>_district_field').slideUp();
-					$('select#<?php echo $type; ?>_district').html('');
-				}
-				
-				$('select#<?php echo $type; ?>_state').on('select2:select', () => {
-					<?php echo $type; ?>_mahdiy_state_changed();
-				});
-				
-				function <?php echo $type; ?>_mahdiy_city_changed() {
-					
-					let data = {
-						'action': 'mahdiy_load_districts',
-						'city_id': $('#<?php echo $type; ?>_city').val(),
-						'type': '<?php echo $type; ?>'
-					};
-					
-					$.post(mahdiy_ajax_url, data, function ( response ) {
-						if( response === "" ) {
-							$('p#<?php echo $type; ?>_district_field').slideUp();
-						} else {
-							$('p#<?php echo $type; ?>_district_field').slideDown();
-						}
-						
-						$('select#<?php echo $type; ?>_district').html(response);
-						$('body').trigger('update_checkout');
-					});
-					
-					$('select#<?php echo $type; ?>_district').select2();
-				}
-				
-				$('select#<?php echo $type; ?>_city').on('select2:select', () => {
-					<?php echo $type; ?>_mahdiy_city_changed();
-				});
-				
-				$('select#<?php echo $type; ?>_state').select2();
-				$('select#<?php echo $type; ?>_city').select2();
-				$('select#<?php echo $type; ?>_district').select2();
-
-				<?php } ?>
-				
-			});
-        </script>
-        <style>
-            .woocommerce form .form-row .select2-container {
-                width: 100% !important;
-            }
-        </style>
-		<?php
 	}
 
 	public function load_shipping_init() {
 		require_once PWS_DIR . '/methods/pws-method.php';
-		require_once PWS_DIR . '/methods/courier-method.php';
-		require_once PWS_DIR . '/methods/custom-method.php';
-		require_once PWS_DIR . '/methods/forehand-method.php';
-		require_once PWS_DIR . '/methods/tipax-method.php';
+		require_once PWS_DIR . '/methods/pws-courier-method.php';
+		require_once PWS_DIR . '/methods/pws-tipax-method.php';
+		require_once PWS_DIR . '/methods/pws-pishtaz-method.php';
 		require_once PWS_DIR . '/methods/tapin-method.php';
-	}
-
-	public function process_shop_order_meta( $order_id, $post ) {
-
-		$types  = [ 'billing' ]; // @todo add shipping after pull request accepted
-		$fields = [ 'state', 'city' ];
-
-		foreach ( $types as $type ) {
-
-			foreach ( $fields as $field ) {
-
-				$key = '_' . $type . '_' . $field;
-
-				if ( isset( $_POST[ $key ] ) && strlen( $_POST[ $key ] ) ) {
-
-					$id = intval( $_POST[ $key ] );
-
-					if ( $field == 'state' ) {
-						$name = PWS()::get_state( $id );
-					} else {
-						$name = PWS()::get_city( $id );
-					}
-
-					if ( ! is_null( $name ) ) {
-						update_post_meta( $order_id, "{$key}", $name );
-						update_post_meta( $order_id, "{$key}_id", $id );
-					}
-
-				}
-
-			}
-		}
-
+		require_once PWS_DIR . '/methods/tapin-pishtaz-method.php';
+		require_once PWS_DIR . '/methods/tapin-special-method.php';
 	}
 
 	public function checkout_update_order_review( $input ) {
@@ -309,7 +190,7 @@ class PWS_Core {
 		$country_setting = get_option( $value['id'] );
 
 		if ( strstr( $country_setting, ':' ) ) {
-			list( $country, $state ) = explode( ':', $country_setting );
+			[ $country, $state ] = explode( ':', $country_setting );
 
 			if ( is_numeric( $state ) ) {
 				$state = intval( $state );
@@ -320,32 +201,51 @@ class PWS_Core {
 		}
 
 		?>
-        <tr valign="top">
-        <th scope="row" class="titledesc">
-            <label for="<?php echo esc_attr( $value['id'] ); ?>"><?php echo esc_html( $value['title'] ); ?></label>
-        </th>
-        <td class="forminp">
-            <select name="<?php echo esc_attr( $value['id'] ); ?>"
-                    style="<?php echo esc_attr( $value['css'] ); ?>"
-                    data-placeholder="<?php esc_attr_e( 'Choose a country&hellip;', 'woocommerce' ); ?>"
-                    aria-label="<?php esc_attr_e( 'Country', 'woocommerce' ) ?>"
-                    class="wc-enhanced-select">
+		<tr valign="top">
+		<th scope="row" class="titledesc">
+			<label for="<?php echo esc_attr( $value['id'] ); ?>"><?php echo esc_html( $value['title'] ); ?></label>
+		</th>
+		<td class="forminp">
+			<select name="<?php echo esc_attr( $value['id'] ); ?>"
+			        style="<?php echo esc_attr( $value['css'] ); ?>"
+			        data-placeholder="<?php esc_attr_e( 'Choose a country&hellip;', 'woocommerce' ); ?>"
+			        aria-label="<?php esc_attr_e( 'Country', 'woocommerce' ) ?>"
+			        class="wc-enhanced-select">
 				<?php WC()->countries->country_dropdown_options( $country, $state ); ?>
-            </select>
-        </td>
-        </tr><?php
+			</select>
+		</td>
+		</tr><?php
 	}
 
 	public function enqueue_select2_scripts() {
-		if ( is_checkout() ) {
-			wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', [ 'jquery' ], '4.0.3' );
-			wp_enqueue_script( 'selectWoo' );
-			wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
-			wp_enqueue_style( 'select2' );
+		if ( ! is_checkout() ) {
+			return false;
 		}
+
+		wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', [ 'jquery' ], '4.0.3' );
+		wp_enqueue_script( 'selectWoo' );
+		wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
+		wp_enqueue_style( 'select2' );
+
+		wp_register_script( 'pwsCheckout', PWS_URL . 'assets/js/pws.js', [ 'selectWoo' ], '1.0.0' );
+		wp_localize_script( 'pwsCheckout', 'pws_settings', [
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'types'    => $this->types(),
+		] );
+		wp_enqueue_script( 'pwsCheckout' );
 	}
 
-	// Filters
+
+	public function enqueue_admin_scripts() {
+
+		wp_register_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css' );
+		wp_enqueue_style( 'select2' );
+
+		wp_enqueue_script( 'pws-admin-general', PWS_URL . 'assets/js/admin.js', [
+			'jquery',
+			'selectWoo',
+		], PWS_VERSION );
+	}
 
 	public function add_shipping_method( $methods ) {
 
@@ -415,11 +315,9 @@ class PWS_Core {
 
 			$class = is_array( $fields[ $type ][ $type . '_city' ]['class'] ) ? $fields[ $type ][ $type . '_city' ]['class'] : [];
 
-			$fields[ $type ][ $type . '_postcode' ]['clear'] = false;
-
 			$fields[ $type ][ $type . '_city' ] = [
 				'type'        => $type . '_city',
-				'label'       => 'شهر',
+				'label'       => __( 'شهر' ),
 				'placeholder' => __( 'لطفا ابتدا استان خود را انتخاب نمایید' ),
 				'required'    => true,
 				'id'          => $type . '_city',
@@ -431,8 +329,8 @@ class PWS_Core {
 			if ( ! PWS_Tapin::is_enable() ) {
 				$fields[ $type ][ $type . '_district' ] = [
 					'type'        => $type . '_district',
-					'label'       => 'محله',
-					'placeholder' => __( 'یک محله انتخاب نمایید' ),
+					'label'       => __( 'محله' ),
+					'placeholder' => __( 'لطفا محله خود را انتخاب نمایید' ),
 					'required'    => false,
 					'id'          => $type . '_district',
 					'class'       => apply_filters( 'pws_district_class', $class ),
@@ -449,6 +347,8 @@ class PWS_Core {
 
 	public function checkout_update_order_meta( $order_id ) {
 
+		$order = wc_get_order( $order_id );
+
 		$types  = $this->types();
 		$fields = [ 'state', 'city', 'district' ];
 
@@ -456,12 +356,25 @@ class PWS_Core {
 
 			foreach ( $fields as $field ) {
 
-				$term_id = get_post_meta( $order_id, "_{$type}_{$field}", true );
-				$term    = get_term( intval( $term_id ) );
+				$meta_key = "_{$type}_{$field}";
+
+				if ( method_exists( $order, "get{$meta_key}" ) ) {
+					$term_id = $order->{"get{$meta_key}"}();
+				} else {
+					$term_id = $order->get_meta( $meta_key );
+				}
+
+				$term = get_term( intval( $term_id ) );
 
 				if ( ! is_wp_error( $term ) && ! is_null( $term ) ) {
-					update_post_meta( $order_id, "_{$type}_{$field}", $term->name );
-					update_post_meta( $order_id, "_{$type}_{$field}_id", $term_id );
+
+					if ( method_exists( $order, "set{$meta_key}" ) ) {
+						$order->{"set{$meta_key}"}( $term->name );
+					} else {
+						$order->update_meta_data( "_{$type}_{$field}", $term->name );
+					}
+
+					$order->update_meta_data( "_{$type}_{$field}_id", $term_id );
 				}
 
 			}
@@ -471,16 +384,31 @@ class PWS_Core {
 
 			foreach ( $fields as $field ) {
 
-				$label = get_post_meta( $order_id, "_billing_{$field}", true );
-				$id    = get_post_meta( $order_id, "_billing_{$field}_id", true );
+				$meta_key = "_billing_{$field}";
 
-				update_post_meta( $order_id, "_shipping_{$field}", $label );
-				update_post_meta( $order_id, "_shipping_{$field}_id", $id );
+				if ( method_exists( $order, "get{$meta_key}" ) ) {
+					$label = $order->{"get{$meta_key}"}();
+				} else {
+					$label = $order->get_meta( "_billing_{$field}" );
+				}
+
+				$id = $order->get_meta( "_billing_{$field}_id" );
+
+				$meta_key = "_shipping_{$field}";
+
+				if ( method_exists( $order, "set{$meta_key}" ) ) {
+					$order->{"set{$meta_key}"}( $label );
+				} else {
+					$order->update_meta_data( "_shipping_{$field}", $label );
+				}
+
+				$order->update_meta_data( "_shipping_{$field}_id", $id );
 
 			}
 
 		}
 
+		$order->save();
 	}
 
 	public function checkout_process() {
@@ -495,7 +423,7 @@ class PWS_Core {
 
 		$type_label = [
 			'billing'  => 'صورتحساب',
-			'shipping' => 'حمل و نقل'
+			'shipping' => 'حمل و نقل',
 		];
 
 		if ( ! isset( $_POST['ship_to_different_address'] ) && count( $types ) == 2 ) {
@@ -547,7 +475,7 @@ class PWS_Core {
 
 						$pkey = $type . '_city';
 
-						if ( isset( $_POST[ $pkey ] ) && ! empty( $_POST[ $pkey ] ) && $term->parent != $_POST[ $pkey ] && $term_id != $_POST[ $pkey ] ) {
+						if ( isset( $_POST[ $pkey ] ) && ! empty( $_POST[ $pkey ] ) && $term->parent != $_POST[ $pkey ] ) {
 							$message = sprintf( '<b>شهر</b> با <b>محله</b> %s انتخاب شده همخوانی ندارند.', $label );
 							wc_add_notice( $message, 'error' );
 						}
@@ -559,19 +487,23 @@ class PWS_Core {
 		}
 	}
 
-	public function checkout_cities_field( $field, $key, $args, $value ) {
+	public function checkout_cities_field( $field, $key, $args, $value ): string {
 
 		$field_html = '';
 		$options    = [];
 
-		list( $type, $name ) = explode( '_', $args['type'] );
+		[ $type, $name ] = explode( '_', $args['type'] );
 
 		if ( $name == 'city' ) {
+
+			$default_state_id = apply_filters( 'pws_default_state', 0, $type );
 
 			$state_id = WC()->checkout()->get_value( $type . '_state' );
 
 			if ( $state_id ) {
 				$options = PWS()->cities( $state_id );
+			} elseif ( $default_state_id ) {
+				$options = PWS()->cities( $default_state_id );
 			}
 
 		} elseif ( $name == 'district' ) {
@@ -582,29 +514,27 @@ class PWS_Core {
 				$options = get_terms( [
 					'taxonomy'   => 'state_city',
 					'hide_empty' => false,
-					'child_of'   => $city_id
+					'child_of'   => $city_id,
 				] );
 
-				$city = get_term( $city_id, 'state_city' );
-
 				$options = array_column( $options, 'name', 'term_id' );
-
-				if ( count( $options ) ) {
-					$options = [ $city->term_id => $city->name ] + $options;
-				}
 			}
 
 		}
 
-		if ( $args['required'] ) {
-			$args['class'][] = 'validate-required';
-			$required        = '&nbsp;<abbr class="required" title="' . esc_attr__( 'required', 'woocommerce' ) . '">*</abbr>';
-		} else {
-			$required = '&nbsp;<span class="optional">(' . esc_html__( 'optional', 'woocommerce' ) . ')</span>';
-		}
+		$ignore_classes = [
+			'thwcfd-optional',
+			'thwcfd-field-wrapper',
+			'thwcfd-field-text',
+		];
+
+		$args['class'] = array_diff( $args['class'], $ignore_classes );
+
+		$args['class'][] = 'validate-required';
+		$required        = '&nbsp;<abbr class="required" title="' . esc_attr__( 'required', 'woocommerce' ) . '">*</abbr>';
 
 		if ( is_string( $args['label_class'] ) ) {
-			$args['label_class'] = array( $args['label_class'] );
+			$args['label_class'] = [ $args['label_class'] ];
 		}
 
 		if ( is_null( $value ) ) {
@@ -634,14 +564,19 @@ class PWS_Core {
 				$field_container = '<p class="form-row %1$s" id="%2$s" style="display: none">%3$s</p>';
 			}
 
-			$field .= '<select name="' . esc_attr( $key ) . '" id="' . esc_attr( $args['id'] ) . '" class="' . esc_attr( implode( ' ', $args['input_class'] ) ) . '" ' . implode( ' ', $custom_attributes ) . ' data-placeholder="' . esc_attr( $args['placeholder'] ) . '">
-				<option value="">' . esc_attr( $args['placeholder'] ) . '&hellip;</option>';
+			$field .= '<select name="' . esc_attr( $key ) . '" id="' . esc_attr( $args['id'] ) . '" class="' . esc_attr( implode( ' ', $args['input_class'] ) ) . '" ' . implode( ' ', $custom_attributes ) . ' data-placeholder="' . esc_attr( $args['placeholder'] ) . '">';
+
+			if ( count( $options ) ) {
+				$field .= '<option value="0">' . esc_attr( $args['placeholder'] ) . '</option>';
+			}
 
 			foreach ( $options as $id => $label ) {
 				if ( $name == 'city' ) {
 					$field .= '<option value="' . esc_attr( $id ) . '" ' . selected( $value, $id, false ) . '>' . $label . '</option>';
 				} elseif ( $name == 'district' ) {
-					$field .= '<option value="' . esc_attr( $id ) . '" ' . selected( $value, $id, false ) . '>' . str_repeat( "- ", count( get_ancestors( $id, 'state_city' ) ) - 2 ) . $label . '</option>';
+					$ancestors = get_ancestors( $id, 'state_city' );
+					$indent    = str_repeat( '- ', max( count( $ancestors ) - 2, 0 ) );
+					$field     .= '<option value="' . esc_attr( $id ) . '" ' . selected( $value, $id, false ) . '>' . $indent . $label . '</option>';
 				}
 			}
 
@@ -663,9 +598,8 @@ class PWS_Core {
 		$container_id    = esc_attr( $args['id'] ) . '_field';
 
 		$after = ! empty( $args['clear'] ) ? '<div class="clear"></div>' : '';
-		$field = sprintf( $field_container, $container_class, $container_id, $field_html ) . $after;
 
-		return $field;
+		return sprintf( $field_container, $container_class, $container_id, $field_html ) . $after;
 	}
 
 	public function cart_shipping_packages( $packages ) {
@@ -674,14 +608,16 @@ class PWS_Core {
 
 		if ( isset( $_POST['post_data'] ) ) {
 			parse_str( $_POST['post_data'], $data );
+		} else {
+			$data = WC()->checkout()->get_posted_data();
+		}
 
-			if ( isset( $data['ship_to_different_address'] ) && in_array( 'shipping', $this->types() ) ) {
-				$type = 'shipping';
-			}
+		if ( isset( $data['ship_to_different_address'] ) && in_array( 'shipping', $this->types() ) ) {
+			$type = 'shipping';
+		}
 
-			for ( $i = 0; $i < count( $packages ); $i ++ ) {
-				$packages[ $i ]['destination']['district'] = intval( $data[ $type . '_district' ] ) != 0 ? $data[ $type . '_district' ] : null;
-			}
+		for ( $i = 0; $i < count( $packages ); $i ++ ) {
+			$packages[ $i ]['destination']['district'] = strval( $data[ $type . '_district' ] ?? null );
 		}
 
 		return $packages;
@@ -693,7 +629,7 @@ class PWS_Core {
 		$option    = get_option( "woocommerce_{$method_id}_settings" );
 
 		if ( isset( $option['img_url'] ) && ! empty( $option['img_url'] ) ) {
-			return sprintf( '<img src="%s" class="%s %s" style="max-width: 100px;display: inline;"/>', $option['img_url'], $method_id, strtok( $method->id, ':' ) ) . $label;
+			return sprintf( '<img src="%s" class="pws-method-image %s %s" style="max-width: 100px;display: inline;"/>', $option['img_url'], $method_id, strtok( $method->id, ':' ) ) . $label;
 		}
 
 		return $label;
@@ -706,19 +642,19 @@ class PWS_Core {
 		return $formats;
 	}
 
-	public function order_formatted_shipping_address( $data, $args ) {
+	public function order_formatted_shipping_address( $data, WC_Order $order ) {
 
 		if ( is_array( $data ) ) {
-			$data['district'] = get_post_meta( $args->get_id(), '_shipping_district', true );
+			$data['district'] = $order->get_meta( '_shipping_district' );
 		}
 
 		return $data;
 	}
 
-	public function order_formatted_billing_address( $data, $args ) {
+	public function order_formatted_billing_address( $data, WC_Order $order ) {
 
 		if ( is_array( $data ) ) {
-			$data['district'] = get_post_meta( $args->get_id(), '_billing_district', true );
+			$data['district'] = $order->get_meta( '_billing_district' );
 		}
 
 		return $data;
@@ -732,7 +668,7 @@ class PWS_Core {
 		}
 
 		if ( ctype_alnum( $replace['{state}'] ) && strlen( $replace['{state}'] ) == 3 && function_exists( 'PW' ) ) {
-			$replace['{state}'] = PW()->address->states[ $args['state'] ] ?? $args['state'];
+			$replace['{state}'] = PW()->address::$states[ $args['state'] ] ?? $args['state'];
 		}
 
 		if ( ctype_alnum( $replace['{state}'] ) && strlen( $replace['{state}'] ) == 3 ) {
@@ -755,96 +691,11 @@ class PWS_Core {
 		return $replace;
 	}
 
-	function my_account_my_address_formatted_address( $args, $customer_id, $name ) {
+	public function my_account_my_address_formatted_address( $args, $customer_id, $name ) {
 
 		$args['district'] = get_user_meta( $customer_id, $name . '_district', true );
 
 		return $args;
-	}
-
-	public function persian_woo_sms_content_replace( $content, $find, $replace, $order_id, $order, $product_ids ) {
-
-		$city                = get_term( $replace[6] );
-		$pws_tag['{b_city}'] = is_wp_error( $city ) || is_null( $city ) ? $replace[6] : $city->name;
-
-		$city                 = get_term( $replace[15] );
-		$pws_tag['{sh_city}'] = is_wp_error( $city ) || is_null( $city ) ? $replace[15] : $city->name;
-
-		return strtr( $content, $pws_tag );
-	}
-
-	public function admin_billing_fields( $fields ) {
-
-		$screen = get_current_screen();
-
-		if ( $screen->id != 'shop_order' ) {
-			return $fields;
-		}
-
-		if ( ! isset( $_GET['post'] ) ) {
-			return $fields;
-		}
-
-		$order_id = intval( $_GET['post'] );
-
-		$state_id = get_post_meta( $order_id, '_billing_state_id', true );
-
-		$fields['state'] = [
-			'label'   => __( 'State', 'woocommerce' ),
-			'show'    => false,
-			'class'   => 'select short',
-			'type'    => 'select',
-			'value'   => $state_id,
-			'options' => PWS()::states(),
-		];
-
-		$fields['city'] = [
-			'label'   => __( 'City', 'woocommerce' ),
-			'show'    => false,
-			'class'   => 'select short',
-			'type'    => 'select',
-			'value'   => get_post_meta( $order_id, '_billing_city_id', true ),
-			'options' => PWS()::cities( $state_id ),
-		];
-
-		return $fields;
-	}
-
-	public function admin_shipping_fields( $fields ) {
-
-		$screen = get_current_screen();
-
-		if ( $screen->id != 'shop_order' ) {
-			return $fields;
-		}
-
-		if ( ! isset( $_GET['post'] ) ) {
-			return $fields;
-		}
-
-		$order_id = intval( $_GET['post'] );
-
-		$state_id = get_post_meta( $order_id, '_shipping_state_id', true );
-
-		$fields['state'] = [
-			'label'   => __( 'State', 'woocommerce' ),
-			'show'    => false,
-			'class'   => 'select short',
-			'type'    => 'select',
-			'value'   => $state_id,
-			'options' => PWS()::states(),
-		];
-
-		$fields['city'] = [
-			'label'   => __( 'City', 'woocommerce' ),
-			'show'    => false,
-			'class'   => 'select short',
-			'type'    => 'select',
-			'value'   => get_post_meta( $order_id, '_shipping_city_id', true ),
-			'options' => PWS()::cities( $state_id ),
-		];
-
-		return $fields;
 	}
 
 	public function checkout_get_value( $value, $key ) {
@@ -873,22 +724,22 @@ class PWS_Core {
 
 		$states = get_transient( 'pws_states' );
 
-		if ( $states === false ) {
+		if ( $states === false || count( (array) $states ) == 0 ) {
 
 			$states = get_terms( [
 				'taxonomy'   => 'state_city',
 				'hide_empty' => false,
-				'parent'     => 0
+				'parent'     => 0,
 			] );
 
 			$states = wp_list_pluck( $states, 'name', 'term_id' );
 
 			uasort( $states, [ self::class, 'pws_sort_state' ] );
 
-			set_transient( 'pws_states', $states, DAY_IN_SECONDS );
+			set_transient( 'pws_states', array_filter( $states ), DAY_IN_SECONDS );
 		}
 
-		return $states;
+		return apply_filters( 'pws_states', $states );
 	}
 
 	public static function get_state( $state_id ) {
@@ -902,12 +753,12 @@ class PWS_Core {
 
 		$cities = get_transient( 'pws_cities_' . $state_id );
 
-		if ( $cities === false ) {
+		if ( $cities === false || count( (array) $cities ) == 0 ) {
 
 			$cities = get_terms( [
 				'taxonomy'   => 'state_city',
 				'hide_empty' => false,
-				'parent'     => $state_id
+				'parent'     => $state_id,
 			] );
 
 			if ( is_wp_error( $cities ) ) {
@@ -919,7 +770,7 @@ class PWS_Core {
 			set_transient( 'pws_cities_' . $state_id, $cities, DAY_IN_SECONDS );
 		}
 
-		return $cities;
+		return apply_filters( 'pws_cities', $cities, $state_id );
 	}
 
 	public static function get_city( $city_id ) {
@@ -930,10 +781,35 @@ class PWS_Core {
 		return is_wp_error( $city ) || is_null( $city ) ? null : $city->name;
 	}
 
-	public function check_states_beside( $source, $destination ) {
+	public static function districts( $city_id ): array {
+
+		$districts = get_terms( [
+			'taxonomy'   => 'state_city',
+			'hide_empty' => false,
+			'parent'     => $city_id,
+		] );
+
+		if ( is_wp_error( $districts ) ) {
+			$districts = [];
+		} else {
+			$districts = array_column( $districts, 'name', 'term_id' );
+		}
+
+		return apply_filters( 'pws_districts', $districts, $city_id );
+	}
+
+	public static function get_district( $district_id ): ?string {
+
+		/** @var WP_Term $district */
+		$district = get_term( $district_id, 'state_city' );
+
+		return is_wp_error( $district ) || is_null( $district ) ? null : $district->name;
+	}
+
+	public function check_states_beside( $source, $destination ): bool {
 
 		if ( $source == $destination ) {
-			return 'in';
+			return false;
 		}
 
 		$is_beside["AE"]["AW"] = true;
@@ -1121,13 +997,30 @@ class PWS_Core {
 			return false;
 		}
 
-		$source      = $source->slug ?? null;
-		$destination = $destination->slug ?? null;
+		$source      = strval( $source->slug ?? null );
+		$destination = strval( $destination->slug ?? null );
 
-		return isset( $is_beside[ strtoupper( $source ) ][ strtoupper( $destination ) ] ) && $is_beside[ strtoupper( $source ) ][ strtoupper( $destination ) ] === true ? 'beside' : 'out';
+		return $is_beside[ strtoupper( $source ) ][ strtoupper( $destination ) ] ?? false;
 	}
 
-	public function convert_currency( $price ) {
+	public function convert_currency_to_IRR( int $price ): int {
+
+		switch ( get_woocommerce_currency() ) {
+			case 'IRT':
+				$price *= 10;
+				break;
+			case 'IRHR':
+				$price *= 1000;
+				break;
+			case 'IRHT':
+				$price *= 10000;
+				break;
+		}
+
+		return $price;
+	}
+
+	public function convert_currency_from_IRR( int $price ): int {
 
 		switch ( get_woocommerce_currency() ) {
 			case 'IRT':
@@ -1144,71 +1037,104 @@ class PWS_Core {
 		return ceil( $price );
 	}
 
-	public function get_term_options( $term_id ) {
+	// Backward compatibility
+	public function convert_currency( int $price ): int {
 
-		$term_option = [
-			'tipax_on'      => 0,
-			'tipax_cost'    => null,
-			'courier_on'    => 0,
-			'courier_cost'  => null,
-			'custom_cost'   => null,
-			'forehand_cost' => null
-		];
+		_doing_it_wrong( 'PWS()->convert_currency', 'Use PWS()->convert_currency_from_IRR', '4.0.0' );
 
-		$terms_meta = get_option( "sabira_taxonomy_" . absint( $term_id ), [] );
+		return $this->convert_currency_from_IRR( $price );
+	}
 
-		return wp_parse_args( $terms_meta, $term_option );
+	public function get_term_option( $term_id ): array {
+		return get_option( 'nabik_taxonomy_' . $term_id, [] );
+	}
+
+	public function set_term_option( $term_id, array $option ) {
+		update_option( 'nabik_taxonomy_' . $term_id, $option, false );
+	}
+
+	public function delete_term_option( $term_id ) {
+		delete_option( 'nabik_taxonomy_' . $term_id );
 	}
 
 	public function get_terms_option( $term_id ) {
 
-		$options = [];
+		$options = wp_cache_get( 'get_terms_option_' . $term_id, 'pws' );
 
-		if ( absint( $term_id ) == 0 ) {
-			return false;
+		if ( $options ) {
+			return $options;
 		}
 
-		$term = get_term( $term_id, 'state_city' );
+		$ancestors = get_ancestors( $term_id, 'state_city' );
 
-		if ( is_wp_error( $term ) ) {
-			return false;
+		if ( empty( $ancestors ) ) {
+			return [];
 		}
 
-		$options[] = PWS()->get_term_options( $term_id ) + (array) $term;
+		array_unshift( $ancestors, $term_id );
 
-		foreach ( get_ancestors( $term_id, 'state_city' ) as $term_id ) {
-			$options[] = $this->get_term_options( $term_id ) + (array) get_term( $term_id, 'state_city' );
-		}
+		$options = array_map( [ $this, 'get_term_option' ], $ancestors );
+
+		wp_cache_set( 'get_terms_option_' . $term_id, $options, 'pws' );
 
 		return $options;
 	}
 
-	public function get_options( $option_name, $default = null ) {
+	public static function get_option( string $option_name, $default = null ) {
 
-		if ( ! function_exists( 'PW' ) ) {
-			return $default;
+		[ $section, $option ] = explode( '.', $option_name );
+
+		$options = get_option( 'pws_' . $section, [] );
+
+		if ( isset( $options[ $option ] ) ) {
+			return $options[ $option ];
 		}
 
-		return PW()->get_options( $option_name, $default );
+		return $default;
+	}
+
+	public static function set_option( string $option_name, $value ) {
+
+		[ $section, $option ] = explode( '.', $option_name );
+
+		$options = get_option( 'pws_' . $section, [] );
+		$options = empty( $options ) ? [] : $options;
+
+		$options[ $option ] = $value;
+
+		update_option( 'pws_' . $section, $options );
 	}
 
 	public function log( ...$params ) {
 		$log = '';
 
-		foreach ( $params as $message ) {
-			if ( is_array( $message ) || is_object( $message ) ) {
-				$log .= date( '[r] ' ) . print_r( $message, true ) . "\n";
-			} elseif ( is_bool( $message ) ) {
-				$log .= date( '[r] ' ) . ( $message ? 'true' : 'false' ) . "\n";
-			} else {
-				$log .= date( '[r] ' ) . $message . "\n";
-			}
+		$date = wp_date( 'Y-m-d' );
+
+		if ( defined( 'WC_LOG_DIR' ) ) {
+			$log_file = WC_LOG_DIR . "pws-{$date}.log";
+		} else {
+			$log_file = WP_CONTENT_DIR . "pws-{$date}.log";
 		}
 
-		file_put_contents( WP_CONTENT_DIR . '/pws.log', $log, FILE_APPEND );
+		foreach ( $params as $message ) {
+
+			$log .= wp_date( '[Y-m-d H:i:s] ' );
+
+			if ( is_array( $message ) || is_object( $message ) ) {
+				$log .= print_r( $message, true );
+			} elseif ( is_bool( $message ) ) {
+				$log .= ( $message ? 'true' : 'false' );
+			} else {
+				$log .= $message;
+			}
+
+			$log .= PHP_EOL;
+		}
+
+		file_put_contents( $log_file, $log, FILE_APPEND );
 	}
 
-	public static function pws_sort_state( $a, $b ) {
+	public static function pws_sort_state( $a, $b ): int {
 
 		if ( $a == $b ) {
 			return 0;
@@ -1255,6 +1181,10 @@ class PWS_Core {
 		$b_key = array_search( trim( $b ), $states );
 
 		return $a_key < $b_key ? - 1 : 1;
+	}
+
+	public function pws_pro_url( $source ): string {
+		return 'https://l.nabik.net/pws-pro?utm_source=' . esc_attr( $source );
 	}
 
 }

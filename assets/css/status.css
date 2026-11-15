@@ -1,0 +1,44 @@
+mark.status-pws-in-stock {
+    background: #547F2D;
+    color: #fff;
+}
+
+mark.status-pws-packaged {
+    background: #307079;
+    color: #fff;
+}
+
+mark.status-pws-ready-to-ship {
+    background: #1D76DB;
+    color: #fff;
+}
+
+mark.status-pws-returned {
+    background: rgba(182, 2, 4, 0.74);
+    color: #fff;
+}
+
+mark.status-pws-deleted {
+    background: #B60204;
+    color: #fff;
+}
+
+mark.status-pws-shipping {
+    background: #0052CC;
+    color: #fff;
+}
+
+mark.status-pws-need-review {
+    background: #FBC904;
+    color: #fff;
+}
+
+mark.status-pws-courier {
+    background: #ec2b2ba1;
+    color: #681818;
+}
+
+mark.status-pws-post {
+    background: #2663bc;
+    color: #fff;
+}
